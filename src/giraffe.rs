@@ -1,4 +1,6 @@
+use crate::camera::CameraTarget;
 use crate::in_air::*;
+use crate::neck::NeckTarget;
 use crate::on_floor::*;
 use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
@@ -49,7 +51,7 @@ fn giraffe_movement(
             &mut KinematicCharacterController,
             &Transform,
         ),
-        Without<InAir>,
+        With<OnFloor>,
     >,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
@@ -59,9 +61,12 @@ fn giraffe_movement(
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
-                    commands.entity(e).insert(InAir {
-                        velocity: g.right_direction.perp() * g.jump_speed,
-                    });
+                    commands
+                        .entity(e)
+                        .remove::<OnFloorBundle>()
+                        .insert(AddInAirBundle {
+                            impulse: g.right_direction.perp() * g.jump_speed,
+                        });
                 }
                 KeyCode::A => {
                     kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
@@ -69,16 +74,7 @@ fn giraffe_movement(
                 KeyCode::D => {
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
-                KeyCode::Space => {
-                    commands.spawn(NeckBundle::new(
-                        transform.translation,
-                        Vec3 {
-                            x: 0.0,
-                            y: 0.0,
-                            z: 0.0,
-                        },
-                    ));
-                }
+                KeyCode::Space => {}
                 _ => {}
             }
         }

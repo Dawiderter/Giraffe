@@ -10,7 +10,6 @@ pub struct PlatformBundle {
     platform: Platform,
     sprite: SpriteBundle,
     collider: Collider,
-    sensor: Sensor,
 }
 
 impl PlatformBundle {
@@ -31,7 +30,6 @@ impl PlatformBundle {
                 ..default()
             },
             collider: Collider::cuboid(size.x / 2.0, size.y / 2.0),
-            sensor: Sensor,
         }
         .with_start_pos(Vec2 { x: 300.0, y: 0.0 })
     }
