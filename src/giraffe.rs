@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use crate::in_air::*;
 use crate::on_floor::*;
+use bevy::prelude::*;
+use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component, Inspectable)]
 struct Giraffe {
@@ -28,37 +28,44 @@ impl Default for GiraffeBundle {
                 jump_speed: 500.0,
                 speed: 300.0,
                 right_direction: Vec2 { x: 1.0, y: 0.0 },
-            }, 
-            sprite: SpriteBundle { 
-                sprite: Sprite { 
-                    color: Color::YELLOW, 
-                    custom_size: Some(Vec2{x: 100., y: 100.}), 
+            },
+            sprite: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::YELLOW,
+                    custom_size: Some(Vec2 { x: 100., y: 100. }),
                     ..default()
-                }, 
+                },
                 ..default()
             },
         }
     }
 }
 
-fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), With<OnFloor>>, 
-                    time: Res<Time>, 
-                    keys: Res<Input<KeyCode>>, 
-                    mut commands: Commands) {
+fn giraffe_movement(
+    mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), With<OnFloor>>,
+    time: Res<Time>,
+    keys: Res<Input<KeyCode>>,
+    mut commands: Commands,
+) {
     for (e, g, mut kcc) in query.iter_mut() {
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
-                    commands.entity(e).remove::<OnFloorBundle>().insert(AddInAirBundle{impulse: g.right_direction.perp() * g.jump_speed});
+                    commands
+                        .entity(e)
+                        .remove::<OnFloorBundle>()
+                        .insert(AddInAirBundle {
+                            impulse: g.right_direction.perp() * g.jump_speed,
+                        });
                 }
                 KeyCode::A => {
-                    kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds()); 
+                    kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
                 }
                 KeyCode::D => {
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
-                } 
-                _ => {},
-            } 
+                }
+                _ => {}
+            }
         }
     }
 }
@@ -67,9 +74,11 @@ fn spawn_giraffe(mut commands: Commands) {
     commands.spawn(GiraffeBundle::default());
 }
 
-fn giraffe_hit_floor(   mut query: Query<(Entity, &InAir, &mut Giraffe)>, 
-                        keys: Res<Input<KeyCode>>, 
-                        mut commands: Commands) {
+fn giraffe_hit_floor(
+    mut query: Query<(Entity, &InAir, &mut Giraffe)>,
+    keys: Res<Input<KeyCode>>,
+    mut commands: Commands,
+) {
     for (e, ai, mut g) in query.iter_mut() {
         for k in keys.get_pressed() {
             // TODO
@@ -80,13 +89,10 @@ pub struct GiraffePlugin;
 
 impl Plugin for GiraffePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_startup_system(spawn_giraffe)
+        app.add_startup_system(spawn_giraffe)
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
-
             //DEBUG
-
             .register_inspectable::<Giraffe>();
     }
 }

@@ -40,6 +40,35 @@ pub struct NeckBendingPoints {
     pub points: Vec<Vec3>,
 }
 
+impl NeckBendingPoints {
+    pub fn from_rectangle(hxhy: Vec2) -> Self {
+        NeckBendingPoints {
+            points: vec![
+                Vec2 {
+                    x: -hxhy.x / 2.0,
+                    y: hxhy.y / 2.0,
+                }
+                .extend(1.0),
+                Vec2 {
+                    x: hxhy.x / 2.0,
+                    y: hxhy.y / 2.0,
+                }
+                .extend(1.0),
+                Vec2 {
+                    x: hxhy.x / 2.0,
+                    y: -hxhy.y / 2.0,
+                }
+                .extend(1.0),
+                Vec2 {
+                    x: -hxhy.x / 2.0,
+                    y: -hxhy.y / 2.0,
+                }
+                .extend(1.0),
+            ],
+        }
+    }
+}
+
 fn neck_bend_system(mut query: Query<&mut NeckPoints>) {}
 
 fn neck_draw_system() {}
@@ -48,7 +77,6 @@ fn neck_system(
     mut query: Query<&mut Transform, With<Neck>>,
     windows: Res<Windows>,
     target_query: Query<&Transform, (Without<Neck>, With<NeckTarget>)>,
-    
 ) {
     let window = windows.get_primary().unwrap();
     let mut transform = query.get_single_mut();
