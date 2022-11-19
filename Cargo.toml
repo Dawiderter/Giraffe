@@ -3,7 +3,61 @@ name = "giraffe"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev.package."*"]
+opt-level = 3
 
 [dependencies]
-bevy ="0.9"
+bevy_rapier2d = "0.19.0"
+leafwing-input-manager = "0.7.0"
+[dependencies.bevy_kira_audio]
+version = "0.13.0"
+default-features = false
+features = [
+  "wav",
+  "flac",
+  "mp3",
+  "ogg",
+]
+[dependencies.bevy]
+version = "0.9.0"
+default-features = false
+features = [
+  "dynamic",            #DELETE THIS BEFORE RELESE, FASTER COMPILE
+  # These are the default features:
+  # (re-enable whichever you like)
+
+  # Bevy functionality:
+  "bevy_asset",         # Assets management
+  "bevy_winit",         # Window management
+  "animation",          # Animation support
+  "x11",                # Linux: Support X11 windowing system
+  "filesystem_watcher", # Asset hot-reloading
+  "render",             # Graphics Rendering
+
+  ## "render" actually just includes:
+  ## (feel free to use just a subset of these, instead of "render")
+  "bevy_render",        # Rendering framework core
+  "bevy_core_pipeline", # Common rendering abstractions
+  "bevy_sprite",        # 2D (sprites) rendering
+  "bevy_text",          # Text/font rendering
+  "bevy_ui",            # UI toolkit
+
+  # File formats:
+  "png",
+
+  # These are other features that may be of interest:
+  # (add any of these that you need)
+
+  # Bevy functionality:
+  "subpixel_glyph_atlas", # Subpixel antialiasing for text/fonts
+  "serialize",            # Support for `serde` Serialize/Deserialize
+
+  # File formats:
+  "ktx2", # preferred format for GPU textures
+  "dds",
+  "jpeg",
+  "bmp",
+  "tga",
+  "basis-universal",
+  "zstd", # needed if using zstd in KTX2 files
+]
