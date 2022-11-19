@@ -42,27 +42,42 @@ impl Default for GiraffeBundle {
 }
 
 fn giraffe_movement(
-    mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), With<OnFloor>>,
+    mut query: Query<
+        (
+            Entity,
+            &Giraffe,
+            &mut KinematicCharacterController,
+            &Transform,
+        ),
+        Without<InAir>,
+    >,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
     mut commands: Commands,
 ) {
-    for (e, g, mut kcc) in query.iter_mut() {
+    for (e, g, mut kcc, transform) in query.iter_mut() {
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
-                    commands
-                        .entity(e)
-                        .remove::<OnFloorBundle>()
-                        .insert(AddInAirBundle {
-                            impulse: g.right_direction.perp() * g.jump_speed,
-                        });
+                    commands.entity(e).insert(InAir {
+                        velocity: g.right_direction.perp() * g.jump_speed,
+                    });
                 }
                 KeyCode::A => {
                     kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
                 }
                 KeyCode::D => {
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
+                }
+                KeyCode::Space => {
+                    commands.spawn(NeckBundle::new(
+                        transform.translation,
+                        Vec3 {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                        },
+                    ));
                 }
                 _ => {}
             }
@@ -71,7 +86,7 @@ fn giraffe_movement(
 }
 
 fn spawn_giraffe(mut commands: Commands) {
-    commands.spawn(GiraffeBundle::default());
+    commands.spawn((GiraffeBundle::default(), CameraTarget, NeckTarget));
 }
 
 fn giraffe_hit_floor(

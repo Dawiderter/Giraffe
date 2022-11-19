@@ -1,7 +1,7 @@
 use arena::ArenaPlugin;
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
 use bevy_editor_pls::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 mod arena;
 mod platform;
@@ -21,10 +21,20 @@ use crate::on_floor::*;
 const WINDOW_HEIGHT: f32 = 900.;
 const WINDOW_WIDTH_PER_HEIGHT: f32 = 1.;
 const PIXELS_PER_METER: f32 = 100.;
+use bevy_kira_audio::prelude::*;
+use neck::NeckPlugin;
+use platform::spawn_platform;
 
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
+mod neck;
+
+mod giraffe;
+mod in_air;
+
+mod platform;
+
+use crate::camera::CameraPlugin;
+use crate::giraffe::*;
+use crate::in_air::*;
 
 fn main() {
     App::new()
@@ -52,6 +62,4 @@ fn main() {
         .add_plugin(InAirPlugin)
         .add_plugin(OnFloorPlugin)
         .run();
-
-    println!("Giraffe ; D");
 }
