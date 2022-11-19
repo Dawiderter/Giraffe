@@ -4,8 +4,8 @@ use bevy_rapier2d::prelude::*;
 
 mod arena;
 
-const WINDOW_HEIGHT : f32 = 1000.;
-const WINDOW_WIDTH_PER_HEIGHT : f32 = 3./4.;
+const WINDOW_HEIGHT : f32 = 900.;
+const WINDOW_WIDTH_PER_HEIGHT : f32 = 1.;
 
 const PIXELS_PER_METER : f32 = 100.;
 
@@ -19,6 +19,7 @@ fn main() {
             window: WindowDescriptor {
                 width: WINDOW_HEIGHT * WINDOW_WIDTH_PER_HEIGHT,
                 height: WINDOW_HEIGHT,
+                position: WindowPosition::Centered,
                 resizable: false,
                 ..default()
             },
