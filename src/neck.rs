@@ -31,15 +31,19 @@ impl Default for NeckBundle {
     }
 }
 
+#[derive(Component)]
+pub struct NeckTarget;
+
 fn neck_system(
     mut query: Query<&mut Transform, With<Neck>>,
     windows: Res<Windows>,
-    ball_query: Query<&Transform, (Without<Neck>, With<Ball>)>,
+    target_query: Query<&Transform, (Without<Neck>, With<NeckTarget>)>,
+    
 ) {
     let window = windows.get_primary().unwrap();
     let mut transform = query.single_mut();
     if let Some(cursor) = window.cursor_position() {
-        let ball = ball_query.single();
+        let ball = target_query.single();
         // let position = position.normalize();
         let cursor = cursor
             - Vec2 {
