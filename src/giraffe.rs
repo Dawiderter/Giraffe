@@ -81,12 +81,11 @@ fn giraffe_movement(
                 }
                 KeyCode::Space => {
                     let bundle = NeckBundle::new(
-                        Vec3 {
+                        Vec2 {
                             x: 5.0,
                             y: 5.0,
-                            z: 5.0,
                         },
-                        transform.translation,
+                        transform.translation.truncate(),
                     );
                     commands.spawn(bundle);
                 }
