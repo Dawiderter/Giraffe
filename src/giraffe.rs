@@ -14,7 +14,7 @@ struct Giraffe {
 #[derive(Bundle)]
 struct GiraffeBundle {
     colider: Collider,
-    characterControler: KinematicCharacterController,
+    character_controller: KinematicCharacterController,
     giraffe: Giraffe,
     sprite: SpriteBundle,
 }
@@ -36,7 +36,7 @@ impl Default for GiraffeBundle {
                 }, 
                 ..default()
             },
-            ..default()
+            character_controller: default(),
         }
     }
 }
