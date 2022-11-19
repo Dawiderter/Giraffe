@@ -4,7 +4,6 @@ use bevy_editor_pls::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 mod arena;
-mod bendable_platform;
 mod on_floor;
 
 mod camera;

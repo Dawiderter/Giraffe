@@ -98,6 +98,7 @@ fn giraffe_movement(
 fn giraffe_turn_system(
     windows: Res<Windows>,
     mut query: Query<(&mut Transform, &mut Collider), With<Giraffe>>,
+    mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>)>,
     camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
 ) {
     if let Ok((camera, glob_transform)) = camera_query.get_single() {
@@ -111,6 +112,10 @@ fn giraffe_turn_system(
             let mouse_pos = camera.ndc_to_world(glob_transform, ndc.extend(0.0));
             if let Ok((mut transform, mut collider)) = query.get_single_mut() {
                 if let Some(mouse_pos) = mouse_pos {
+                    if let Ok(mut head) = child_query.get_single_mut() {
+                        head.translation = mouse_pos;
+                        println!("{}, {}", head.translation.x, head.translation.y);
+                    }
                     let looking_left = f32::signum(transform.scale.x);
                     if looking_left < 0.0 && mouse_pos.x > transform.translation.x
                         || looking_left > 0.0 && mouse_pos.x < transform.translation.x

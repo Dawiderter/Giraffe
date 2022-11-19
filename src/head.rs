@@ -3,7 +3,7 @@ use bevy_inspector_egui::Inspectable;
 use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
-struct Head;
+pub struct Head;
 
 #[derive(Bundle)]
 pub struct HeadBundle {
