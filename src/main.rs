@@ -24,6 +24,7 @@ use bevy_kira_audio::prelude::*;
 mod neck;
 
 mod giraffe;
+mod head;
 mod in_air;
 
 mod platform;

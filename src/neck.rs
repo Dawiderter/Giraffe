@@ -140,8 +140,6 @@ impl NeckBendingPoints {
 
 fn neck_bend_system(mut query: Query<&mut NeckPoints>) {}
 
-fn neck_draw_system() {}
-
 fn neck_mouse(mut neck_query: Query<&mut NeckPoints>, windows: Res<Windows>, input : Res<Input<MouseButton>>) {
 
     let window = windows.get_primary().unwrap();

@@ -7,8 +7,11 @@ pub fn camera_viewport_to_world() {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn((Camera2dBundle::default(), WallMoveTarget));
+    commands.spawn((Camera2dBundle::default(), WallMoveTarget, MainCamera));
 }
+
+#[derive(Component)]
+pub struct MainCamera;
 
 #[derive(Component)]
 pub struct CameraTarget;
