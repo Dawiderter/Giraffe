@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use crate::in_air::*;
 
@@ -12,6 +13,8 @@ struct Giraffe {
 
 #[derive(Bundle)]
 struct GiraffeBundle {
+    colider: Collider,
+    characterControler: KinematicCharacterController,
     giraffe: Giraffe,
     sprite: SpriteBundle,
 }
@@ -19,6 +22,7 @@ struct GiraffeBundle {
 impl Default for GiraffeBundle {
     fn default() -> Self {
         Self { 
+            colider: Collider::ball(100.0),
             giraffe: Giraffe {
                 jump_speed: 800.0,
                 speed: 600.0,
@@ -31,26 +35,27 @@ impl Default for GiraffeBundle {
                     ..default()
                 }, 
                 ..default()
-            } 
+            },
+            ..default()
         }
     }
 }
 
-fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut Transform), Without<InAir>>, 
+fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), Without<InAir>>, 
                     time: Res<Time>, 
                     keys: Res<Input<KeyCode>>, 
                     mut commands: Commands) {
-    for (e, g, mut t) in query.iter_mut() {
+    for (e, g, mut kcc) in query.iter_mut() {
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
                     commands.entity(e).insert(InAir{velocity: g.right_direction.perp() * g.jump_speed});
                 }
                 KeyCode::A => {
-                    t.translation -= g.right_direction.extend(0.0) * g.speed * time.delta_seconds();
+                    kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds()); 
                 }
                 KeyCode::D => {
-                    t.translation += g.right_direction.extend(0.0) * g.speed * time.delta_seconds();
+                    kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 } 
                 _ => {},
             } 
