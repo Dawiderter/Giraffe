@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use crate::in_air::*;
+use crate::on_floor::*;
 
 #[derive(Component, Inspectable)]
 struct Giraffe {
@@ -10,12 +11,10 @@ struct Giraffe {
     right_direction: Vec2,
 }
 
-
 #[derive(Bundle)]
 struct GiraffeBundle {
     name: Name,
-    colider: Collider,
-    characterControler: KinematicCharacterController,
+    on_floor: OnFloorBundle,
     giraffe: Giraffe,
     sprite: SpriteBundle,
 }
@@ -24,11 +23,10 @@ impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
             name: Name::new("Giraffe"),
-            colider: Collider::ball(100.0),
-            characterControler: KinematicCharacterController::default(),
+            on_floor: OnFloorBundle::default(),
             giraffe: Giraffe {
-                jump_speed: 800.0,
-                speed: 600.0,
+                jump_speed: 500.0,
+                speed: 300.0,
                 right_direction: Vec2 { x: 1.0, y: 0.0 },
             }, 
             sprite: SpriteBundle { 
@@ -43,7 +41,7 @@ impl Default for GiraffeBundle {
     }
 }
 
-fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), Without<InAir>>, 
+fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterController), With<OnFloor>>, 
                     time: Res<Time>, 
                     keys: Res<Input<KeyCode>>, 
                     mut commands: Commands) {
@@ -51,7 +49,7 @@ fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterC
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
-                    commands.entity(e).insert(InAir{velocity: g.right_direction.perp() * g.jump_speed});
+                    commands.entity(e).remove::<OnFloorBundle>().insert(AddInAirBundle{impulse: g.right_direction.perp() * g.jump_speed});
                 }
                 KeyCode::A => {
                     kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds()); 
@@ -74,10 +72,7 @@ fn giraffe_hit_floor(   mut query: Query<(Entity, &InAir, &mut Giraffe)>,
                         mut commands: Commands) {
     for (e, ai, mut g) in query.iter_mut() {
         for k in keys.get_pressed() {
-            if *k == KeyCode::Space {
-                g.right_direction = ai.velocity.clamp_length(1.0, 1.0).perp();
-                commands.entity(e).remove::<InAir>();
-            }
+            // TODO
         }
     }
 }
