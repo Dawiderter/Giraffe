@@ -1,9 +1,10 @@
+use crate::camera::CameraTarget;
+use crate::in_air::*;
+use crate::on_floor::*;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
-
-use crate::camera::CameraTarget;
 
 use crate::neck::{NeckTarget, NeckPoints};
 use crate::{in_air::InAir, neck::NeckBundle};
@@ -17,8 +18,8 @@ struct Giraffe {
 
 #[derive(Bundle)]
 struct GiraffeBundle {
-    colider: Collider,
-    character_controller: KinematicCharacterController,
+    name: Name,
+    on_floor: OnFloorBundle,
     giraffe: Giraffe,
     sprite: SpriteBundle,
 }
@@ -26,10 +27,11 @@ struct GiraffeBundle {
 impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
-            colider: Collider::ball(100.0),
+            name: Name::new("Giraffe"),
+            on_floor: OnFloorBundle::default(),
             giraffe: Giraffe {
-                jump_speed: 800.0,
-                speed: 600.0,
+                jump_speed: 500.0,
+                speed: 300.0,
                 right_direction: Vec2 { x: 1.0, y: 0.0 },
             },
             sprite: SpriteBundle {
@@ -40,7 +42,6 @@ impl Default for GiraffeBundle {
                 },
                 ..default()
             },
-            character_controller: default(),
         }
     }
 }
@@ -53,7 +54,7 @@ fn giraffe_movement(
             &mut KinematicCharacterController,
             &Transform,
         ),
-        Without<InAir>,
+        With<OnFloor>,
     >,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
@@ -65,9 +66,12 @@ fn giraffe_movement(
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
-                    commands.entity(e).insert(InAir {
-                        velocity: g.right_direction.perp() * g.jump_speed,
-                    });
+                    commands
+                        .entity(e)
+                        .remove::<OnFloorBundle>()
+                        .insert(AddInAirBundle {
+                            impulse: g.right_direction.perp() * g.jump_speed,
+                        });
                 }
                 KeyCode::A => {
                     kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
@@ -115,10 +119,7 @@ fn giraffe_hit_floor(
 ) {
     for (e, ai, mut g) in query.iter_mut() {
         for k in keys.get_pressed() {
-            if *k == KeyCode::Space {
-                g.right_direction = ai.velocity.clamp_length(1.0, 1.0).perp();
-                commands.entity(e).remove::<InAir>();
-            }
+            // TODO
         }
     }
 }
