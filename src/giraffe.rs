@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
 
+use crate::camera::CameraTarget;
+
 use crate::{in_air::InAir, neck::NeckBundle};
 
 #[derive(Component, Inspectable)]

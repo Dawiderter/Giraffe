@@ -44,7 +44,6 @@ fn main() {
         .add_plugin(AudioPlugin)
         .add_plugin(NeckPlugin)
         .add_plugin(CameraPlugin)
-        .add_startup_system(spawn_neck)
         .add_plugin(EditorPlugin)
         .add_plugin(GiraffePlugin)
         .add_plugin(InAirPlugin)
