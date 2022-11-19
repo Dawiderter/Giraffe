@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
-use crate::in_air::*;
+use crate::{in_air::*, camera::CameraTarget};
 
 #[derive(Component, Inspectable)]
 struct Giraffe {
@@ -64,7 +64,7 @@ fn giraffe_movement(mut query: Query<(Entity, &Giraffe, &mut KinematicCharacterC
 }
 
 fn spawn_giraffe(mut commands: Commands) {
-    commands.spawn(GiraffeBundle::default());
+    commands.spawn((GiraffeBundle::default(), CameraTarget));
 }
 
 fn giraffe_hit_floor(   mut query: Query<(Entity, &InAir, &mut Giraffe)>, 

@@ -38,7 +38,7 @@ fn setup_floor(
 struct Wall;
 
 #[derive(Component)]
-struct WallMoveTarget;
+pub struct WallMoveTarget;
 
 fn setup_walls(
     mut commands: Commands,
@@ -76,15 +76,11 @@ fn setup_walls(
     ));
 }
 
-fn auto_move_walls(mut wall_query: Query<&mut Transform, (With<Wall>, Without<WallMoveTarget>)>, player_query : Query<&Transform, (With<WallMoveTarget>, Without<Wall>)>) {
-    let player_avg_y : f32 = player_query.iter().map(|transform| transform.translation.y).sum::<f32>() / player_query.iter().count() as f32;
-
-    if !player_avg_y.is_nan() {
-        for mut wall in wall_query.iter_mut() {
-            wall.translation.y = player_avg_y;
-        }
+fn auto_move_walls(mut wall_query: Query<&mut Transform, (With<Wall>, Without<WallMoveTarget>)>, target_query : Query<&Transform, (With<WallMoveTarget>, Without<Wall>)>) {
+    let target_avg_y = target_query.single().translation.y;
+    for mut wall in wall_query.iter_mut() {
+        wall.translation.y = target_avg_y;
     }
-
 }
 
 #[derive(Component)]
@@ -112,7 +108,6 @@ fn test_ball(
         },
         ExternalForce::default(),
         Ball,
-        WallMoveTarget
     ));
 }
 
