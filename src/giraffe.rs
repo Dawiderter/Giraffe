@@ -1,10 +1,11 @@
 use bevy::prelude::*;
+use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
 
 use crate::camera::CameraTarget;
 
-use crate::neck::NeckTarget;
+use crate::neck::{NeckTarget, NeckPoints};
 use crate::{in_air::InAir, neck::NeckBundle};
 
 #[derive(Component, Inspectable)]
@@ -56,6 +57,8 @@ fn giraffe_movement(
     >,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut commands: Commands,
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
@@ -73,14 +76,27 @@ fn giraffe_movement(
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
                 KeyCode::Space => {
-                    commands.spawn(NeckBundle::new(
+                    let mut bundle = NeckBundle::new(
                         transform.translation,
                         Vec3 {
-                            x: 0.0,
-                            y: 0.0,
-                            z: 0.0,
+                            x: 5.0,
+                            y: 5.0,
+                            z: 5.0,
                         },
-                    ));
+                        meshes.add(Mesh::new(PrimitiveTopology::TriangleStrip)).into(),
+                        materials.add(ColorMaterial::from(Color::RED)),
+                    );
+
+                    bundle.neckpoints = NeckPoints {
+                        points: vec![
+                            Vec3::new(0.0, 0.0, 0.0),
+                            Vec3::new(100.0, 100.0, 0.0),
+                            Vec3::new(50.0, 400.0, 0.0),
+                        ],
+                        last_point: Vec3::new(200.0, 300.0, 0.0),
+                    };
+
+                    commands.spawn(bundle);
                 }
                 _ => {}
             }
