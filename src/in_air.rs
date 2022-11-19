@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component, Inspectable)]
 pub struct  InAir {
@@ -14,10 +15,10 @@ impl Default for InAir {
     }
 }
 
-fn in_air_movement( mut query: Query<(&mut Transform, &InAir)>, 
+fn in_air_movement( mut query: Query<(&mut KinematicCharacterController, &InAir)>, 
                     time: Res<Time>) {
-    for (mut t, ia) in query.iter_mut() {
-        t.translation += ia.velocity.extend(0.0) * time.delta_seconds();
+    for (mut kcc, ia) in query.iter_mut() {
+        kcc.translation = Some(ia.velocity * time.delta_seconds());
     }
 }
 

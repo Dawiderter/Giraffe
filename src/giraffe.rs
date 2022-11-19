@@ -13,6 +13,7 @@ struct Giraffe {
 
 #[derive(Bundle)]
 struct GiraffeBundle {
+    name: Name,
     colider: Collider,
     characterControler: KinematicCharacterController,
     giraffe: Giraffe,
@@ -21,8 +22,10 @@ struct GiraffeBundle {
 
 impl Default for GiraffeBundle {
     fn default() -> Self {
-        Self { 
+        Self {
+            name: Name::new("Giraffe"),
             colider: Collider::ball(100.0),
+            characterControler: KinematicCharacterController::default(),
             giraffe: Giraffe {
                 jump_speed: 800.0,
                 speed: 600.0,
@@ -36,7 +39,6 @@ impl Default for GiraffeBundle {
                 }, 
                 ..default()
             },
-            ..default()
         }
     }
 }
