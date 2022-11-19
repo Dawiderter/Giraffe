@@ -1,3 +1,4 @@
+use crate::arena::Ball;
 use bevy::prelude::*;
 
 const NECK_WIDTH: f32 = 25.0;
@@ -30,25 +31,39 @@ impl Default for NeckBundle {
     }
 }
 
-fn neck_system(mut query: Query<&mut Transform, With<Neck>>, windows: Res<Windows>) {
+fn neck_system(
+    mut query: Query<&mut Transform, With<Neck>>,
+    windows: Res<Windows>,
+    ball_query: Query<&Transform, (Without<Neck>, With<Ball>)>,
+) {
     let window = windows.get_primary().unwrap();
     let mut transform = query.single_mut();
-    if let Some(position) = window.cursor_position() {
+    if let Some(cursor) = window.cursor_position() {
+        let ball = ball_query.single();
         // let position = position.normalize();
-        let position = position
+        let cursor = cursor
             - Vec2 {
                 x: window.width() / 2.0,
                 y: window.height() / 2.0,
             };
-        let radian = f32::atan2(position.y, position.x);
+        let radian = f32::atan2(ball.translation.y - cursor.y, ball.translation.x - cursor.x);
+        let len = f32::sqrt(
+            f32::powi(ball.translation.x - cursor.x, 2)
+                + f32::powi(ball.translation.y - cursor.y, 2),
+        );
+        let halfway = Vec3 {
+            x: (cursor.x + ball.translation.x) / 2.0,
+            y: (cursor.y + ball.translation.y) / 2.0,
+            z: 0.0,
+        };
         transform.rotation = Quat::from_rotation_z(radian);
         transform.translation = Vec3 {
-            x: position.normalize().x * position.length() / 2.0,
-            y: position.normalize().y * position.length() / 2.0,
+            x: halfway.x,
+            y: halfway.y,
             z: 0.0,
         };
         transform.scale = Vec3 {
-            x: position.length(),
+            x: len,
             y: NECK_WIDTH,
             z: 0.0,
         };
