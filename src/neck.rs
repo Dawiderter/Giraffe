@@ -11,7 +11,6 @@ struct Neck;
 #[derive(Bundle)]
 pub struct NeckBundle {
     neck: Neck,
-    pub sprite_bundle: SpriteBundle,
     neckpoints: NeckPoints,
 }
 
@@ -19,15 +18,6 @@ impl NeckBundle {
     pub fn new(head_point: Vec3, body_point: Vec3) -> Self {
         Self {
             neck: Neck,
-            sprite_bundle: SpriteBundle {
-                sprite: Sprite {
-                    color: Color::rgb(0.8, 0.8, 1.0),
-                    custom_size: Some(Vec2::new(1.0, 1.0)),
-                    ..default()
-                },
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-                ..default()
-            },
             neckpoints: NeckPoints {
                 points: vec![head_point],
                 last_point: body_point,
@@ -46,11 +36,13 @@ struct NeckPoints {
 }
 
 #[derive(Component)]
-struct NeckBendingPlatform {
-    points: Vec<Vec3>,
+pub struct NeckBendingPoints {
+    pub points: Vec<Vec3>,
 }
 
 fn neck_bend_system(mut query: Query<&mut NeckPoints>) {}
+
+fn neck_draw_system() {}
 
 fn neck_system(
     mut query: Query<&mut Transform, With<Neck>>,

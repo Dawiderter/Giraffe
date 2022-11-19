@@ -1,7 +1,5 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, utils::FloatOrd};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_rapier2d::prelude::*;
-
-use crate::PIXELS_PER_METER;
 
 const FLOOR_RISE: f32 = 50.;
 const WALL_WIDTH: f32 = 50.;
@@ -60,7 +58,8 @@ fn setup_walls(
             transform: Transform::from_translation(Vec3::new(-window.width() / 2., 0., 0.)),
             ..default()
         },
-        Collider::cuboid(width / 2., height / 2.), Wall,
+        Collider::cuboid(width / 2., height / 2.),
+        Wall,
     ));
 
     commands.spawn((
@@ -72,11 +71,15 @@ fn setup_walls(
             transform: Transform::from_translation(Vec3::new(window.width() / 2., 0., 0.)),
             ..default()
         },
-        Collider::cuboid(width / 2., height / 2.), Wall,
+        Collider::cuboid(width / 2., height / 2.),
+        Wall,
     ));
 }
 
-fn auto_move_walls(mut wall_query: Query<&mut Transform, (With<Wall>, Without<WallMoveTarget>)>, target_query : Query<&Transform, (With<WallMoveTarget>, Without<Wall>)>) {
+fn auto_move_walls(
+    mut wall_query: Query<&mut Transform, (With<Wall>, Without<WallMoveTarget>)>,
+    target_query: Query<&Transform, (With<WallMoveTarget>, Without<Wall>)>,
+) {
     let target_avg_y = target_query.single().translation.y;
     for mut wall in wall_query.iter_mut() {
         wall.translation.y = target_avg_y;
@@ -113,7 +116,7 @@ fn test_ball(
 
 fn test_ball_movement(
     mut query: Query<&mut ExternalForce, With<Ball>>,
-    input : Res<Input<KeyCode>>,
+    input: Res<Input<KeyCode>>,
 ) {
     for mut ball_force in query.iter_mut() {
         ball_force.force = Vec2::new(0., 0.);

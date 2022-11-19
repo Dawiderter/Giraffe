@@ -11,14 +11,15 @@ const WINDOW_WIDTH_PER_HEIGHT: f32 = 1.;
 
 const PIXELS_PER_METER: f32 = 100.;
 use bevy_kira_audio::prelude::*;
-use neck::{NeckBundle, NeckPlugin};
+use neck::NeckPlugin;
+use platform::spawn_platform;
 
 mod neck;
 
-mod bendable_platform;
-
 mod giraffe;
 mod in_air;
+
+mod platform;
 
 use crate::camera::CameraPlugin;
 use crate::giraffe::*;
@@ -47,7 +48,6 @@ fn main() {
         .add_plugin(EditorPlugin)
         .add_plugin(GiraffePlugin)
         .add_plugin(InAirPlugin)
+        .add_startup_system(spawn_platform)
         .run();
-
-    println!("Giraffe ; D");
 }
