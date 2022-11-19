@@ -39,7 +39,6 @@ fn main() {
             PIXELS_PER_METER,
         ))
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_startup_system(setup_camera)
         .add_plugin(ArenaPlugin)
         .add_plugin(AudioPlugin)
         .add_plugin(NeckPlugin)
