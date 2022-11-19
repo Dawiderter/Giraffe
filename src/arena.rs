@@ -34,6 +34,12 @@ fn setup_floor(
     ));
 }
 
+#[derive(Component)]
+struct Wall;
+
+#[derive(Component)]
+struct WallMoveTarget;
+
 fn setup_walls(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -54,7 +60,7 @@ fn setup_walls(
             transform: Transform::from_translation(Vec3::new(-window.width() / 2., 0., 0.)),
             ..default()
         },
-        Collider::cuboid(width / 2., height / 2.),
+        Collider::cuboid(width / 2., height / 2.), Wall,
     ));
 
     commands.spawn((
@@ -66,8 +72,19 @@ fn setup_walls(
             transform: Transform::from_translation(Vec3::new(window.width() / 2., 0., 0.)),
             ..default()
         },
-        Collider::cuboid(width / 2., height / 2.),
+        Collider::cuboid(width / 2., height / 2.), Wall,
     ));
+}
+
+fn auto_move_walls(mut wall_query: Query<&mut Transform, (With<Wall>, Without<WallMoveTarget>)>, player_query : Query<&Transform, (With<WallMoveTarget>, Without<Wall>)>) {
+    let player_avg_y : f32 = player_query.iter().map(|transform| transform.translation.y).sum::<f32>() / player_query.iter().count() as f32;
+
+    if !player_avg_y.is_nan() {
+        for mut wall in wall_query.iter_mut() {
+            wall.translation.y = player_avg_y;
+        }
+    }
+
 }
 
 #[derive(Component)]
@@ -95,6 +112,7 @@ fn test_ball(
         },
         ExternalForce::default(),
         Ball,
+        WallMoveTarget
     ));
 }
 
@@ -118,6 +136,7 @@ impl Plugin for ArenaPlugin {
         app.add_startup_system(setup_floor)
             .add_startup_system(setup_walls)
             .add_startup_system(test_ball)
-            .add_system(test_ball_movement);
+            .add_system(test_ball_movement)
+            .add_system(auto_move_walls);
     }
 }
