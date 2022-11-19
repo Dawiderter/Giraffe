@@ -88,7 +88,7 @@ fn auto_move_walls(mut wall_query: Query<&mut Transform, (With<Wall>, Without<Wa
 }
 
 #[derive(Component)]
-struct Ball;
+pub struct Ball;
 
 fn test_ball(
     mut commands: Commands,
