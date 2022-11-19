@@ -1,4 +1,5 @@
 use crate::camera::CameraTarget;
+use crate::camera::MainCamera;
 use crate::in_air::*;
 use crate::on_floor::*;
 use bevy::prelude::*;
@@ -6,7 +7,8 @@ use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
 
-use crate::neck::{NeckTarget, NeckPoints};
+use crate::head::*;
+use crate::neck::{NeckPoints, NeckTarget};
 use crate::{in_air::InAir, neck::NeckBundle};
 
 #[derive(Component, Inspectable)]
@@ -87,7 +89,9 @@ fn giraffe_movement(
                             y: 5.0,
                             z: 5.0,
                         },
-                        meshes.add(Mesh::new(PrimitiveTopology::TriangleStrip)).into(),
+                        meshes
+                            .add(Mesh::new(PrimitiveTopology::TriangleStrip))
+                            .into(),
                         materials.add(ColorMaterial::from(Color::RED)),
                     );
 
@@ -108,8 +112,41 @@ fn giraffe_movement(
     }
 }
 
+fn giraffe_turn_system(
+    windows: Res<Windows>,
+    mut query: Query<(&mut Transform, &mut Collider), With<Giraffe>>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+) {
+    if let Ok((camera, glob_transform)) = camera_query.get_single() {
+        let window = windows.get_primary().unwrap();
+        if let Some(cursor) = window.cursor_position() {
+            let window_size = Vec2 {
+                x: window.width(),
+                y: window.height(),
+            };
+            let ndc = (cursor / window_size) * 2.0 - Vec2::ONE;
+            let mouse_pos = camera.ndc_to_world(glob_transform, ndc.extend(0.0));
+            if let Ok((mut transform, mut collider)) = query.get_single_mut() {
+                if let Some(mouse_pos) = mouse_pos {
+                    let looking_left = f32::signum(transform.scale.x);
+                    if looking_left < 0.0 && mouse_pos.x > transform.translation.x
+                        || looking_left > 0.0 && mouse_pos.x < transform.translation.x
+                    {
+                        transform.scale.x = -transform.scale.x;
+                        collider.set_scale(Vec2 { x: 1.0, y: 1.0 }, 100);
+                    };
+                }
+            }
+        }
+    }
+}
+
 fn spawn_giraffe(mut commands: Commands) {
-    commands.spawn((GiraffeBundle::default(), CameraTarget, NeckTarget));
+    commands
+        .spawn((GiraffeBundle::default(), CameraTarget, NeckTarget))
+        .with_children(|parent| {
+            parent.spawn(HeadBundle::new());
+        });
 }
 
 fn giraffe_hit_floor(
@@ -130,6 +167,7 @@ impl Plugin for GiraffePlugin {
         app.add_startup_system(spawn_giraffe)
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
+            .add_system(giraffe_turn_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
     }
