@@ -38,25 +38,24 @@ fn neck_system(
 ) {
     let window = windows.get_primary().unwrap();
     let mut transform = query.single_mut();
-    if let Some(position) = window.cursor_position() {
+    if let Some(cursor) = window.cursor_position() {
         let ball = ball_query.single();
         // let position = position.normalize();
-        let position = position
+        let cursor = cursor
             - Vec2 {
                 x: window.width() / 2.0,
                 y: window.height() / 2.0,
             };
-        let radian = f32::atan2(position.y, position.x);
+        let radian = f32::atan2(ball.translation.y - cursor.y, ball.translation.x - cursor.x);
         let len = f32::sqrt(
-            f32::powi(ball.translation.x - position.x, 2)
-                + f32::powi(ball.translation.y - position.y, 2),
+            f32::powi(ball.translation.x - cursor.x, 2)
+                + f32::powi(ball.translation.y - cursor.y, 2),
         );
         let halfway = Vec3 {
-            x: (position.x + ball.translation.x) / 2.0,
-            y: (position.y + ball.translation.y) / 2.0,
+            x: (cursor.x + ball.translation.x) / 2.0,
+            y: (cursor.y + ball.translation.y) / 2.0,
             z: 0.0,
         };
-        println!("{len}");
         transform.rotation = Quat::from_rotation_z(radian);
         transform.translation = Vec3 {
             x: halfway.x,
