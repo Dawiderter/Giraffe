@@ -4,6 +4,7 @@ use bevy_rapier2d::prelude::*;
 use bevy_editor_pls::prelude::*;
 
 mod arena;
+mod platform;
 mod neck;
 mod bendable_platform;
 mod giraffe;
@@ -19,11 +20,6 @@ use crate::on_floor::*;
 const WINDOW_HEIGHT: f32 = 900.;
 const WINDOW_WIDTH_PER_HEIGHT: f32 = 1.;
 const PIXELS_PER_METER: f32 = 100.;
-
-fn spawn_neck(mut commands: Commands) {
-    commands.spawn(NeckBundle::default());
-}
-
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -48,7 +44,7 @@ fn main() {
         .add_plugin(ArenaPlugin)
         .add_plugin(AudioPlugin)
         .add_plugin(NeckPlugin)
-        .add_startup_system(spawn_neck)
+        .add_startup_system(spawn_platform)
         .add_startup_system(setup_camera)
         .add_plugin(EditorPlugin)
         .add_plugin(GiraffePlugin)
