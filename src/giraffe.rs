@@ -32,6 +32,9 @@ pub struct Giraffe {
 #[derive(Component)]
 struct GiraffeNeckStart(Vec2);
 
+#[derive(Component)]
+struct PreviousPlatform(Entity);
+
 #[derive(Bundle)]
 struct GiraffeBundle {
     name: Name,
@@ -130,7 +133,6 @@ fn giraffe_movement(
                                 QueryFilter::new().groups(InteractionGroups::all()),
                             ) {
                                 let hit_point = ray_start + ray_dir * toi;
-                                println!("Entity {:?} hit at point {}", entity, hit_point);
                                 if neck_query.iter().count() == 0 {
                                     commands.spawn(NeckBundle::new(
                                         hit_point,
@@ -150,6 +152,11 @@ fn giraffe_movement(
                                             },
                                         point: hit_point,
                                     });
+                                    commands.entity(e).remove::<OnFloorBundle>().insert(
+                                        AddInAirBundle {
+                                            impulse: g.right_direction.perp() * g.jump_speed,
+                                        },
+                                    );
                                 }
                             }
 
@@ -172,7 +179,6 @@ fn keep_neck_at_player_system(
             neck.last_point = transform
                 .transform_point(neckstart.0.extend(0.0))
                 .truncate();
-            println!("{}", neck.last_point);
         }
     }
 }
@@ -183,15 +189,22 @@ fn giraffe_turn_system(
     mouse_pos: Res<CursorWorldPos>,
 ) {
     if let Ok((g, t)) = giraffe.get_single() {
-        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
-            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) > 0.0 {
-                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+        if let Ok((mut transform, mut sprite)) = query.get_single_mut() {
+            if g.right_direction.angle_between(Vec2 { x: 0.0, y: -1.0 }) > 0.0 {
+                transform.rotation =
+                    Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
             } else {
-                transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
+                transform.rotation = Quat::from_rotation_z(
+                    2.0 * PI - g.right_direction.angle_between(RIGHT_DIRECTION),
+                );
             }
 
             if let Ok(mouse_pos) = mouse_pos.pos {
-                if g.right_direction.angle_between(mouse_pos.truncate() - t.translation.truncate()).abs() < PI/2.0 {
+                if g.right_direction
+                    .angle_between(mouse_pos.truncate() - t.translation.truncate())
+                    .abs()
+                    < PI / 2.0
+                {
                     sprite.flip_x = false;
                 } else {
                     sprite.flip_x = true;
@@ -200,7 +213,6 @@ fn giraffe_turn_system(
         }
     }
 }
-
 
 fn head_turn_system(
     mut query: Query<&mut Transform, With<Giraffe>>,
@@ -231,18 +243,40 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
             CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
         ))
         .with_children(|parent| {
-            parent.spawn((SpriteBundle {
-                texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
-                sprite: Sprite {
-                    custom_size: Some(Vec2{x:150.0, y: 150.0}),
+            parent.spawn((
+                SpriteBundle {
+                    texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
+                    sprite: Sprite {
+                        custom_size: Some(Vec2 { x: 150.0, y: 150.0 }),
+                        ..default()
+                    },
                     ..default()
                 },
-                ..default()
-            },GiraffeSprite));
-            })
+                GiraffeSprite,
+            ));
+        })
         .with_children(|parent| {
             parent.spawn(HeadBundle::new());
         });
+}
+
+fn remove_neck_system(
+    mut query: Query<(Entity), (With<Neck>, With<InAir>)>,
+    mut platform_query: Query<(Entity, &mut PreviousPlatform)>,
+    rapier_ctx: Res<RapierContext>,
+    mut commands: Commands,
+) {
+    for e in query.iter() {
+        if rapier_ctx.contacts_with(e).count() > 0 {
+            println!("Deleting");
+            commands
+                .get_entity(e)
+                .unwrap()
+                .remove::<NeckBundle>()
+                .remove::<ColorMesh2dBundle>();
+            commands.remove_resource::<Assets<Mesh>>();
+        }
+    }
 }
 
 fn giraffe_hit_floor(
@@ -306,6 +340,7 @@ impl Plugin for GiraffePlugin {
             .add_system(head_turn_system)
             .add_system(giraffe_turn_system)
             .add_system(keep_neck_at_player_system)
+            .add_system(remove_neck_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
     }

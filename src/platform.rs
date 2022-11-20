@@ -46,11 +46,5 @@ pub fn spawn_platform(mut commands: Commands) {
     let size = Vec2 { x: 100.0, y: 40.0 };
     commands.spawn(PlatformBundle::type_one(Vec2 { x: 300.0, y: 0.0 }, size));
     commands.spawn(PlatformBundle::type_one(Vec2 { x: 150.0, y: 300.0 }, size));
-    commands.spawn(PlatformBundle::type_one(
-        Vec2 {
-            x: 0.0,
-            y: -100.0,
-        },
-        size,
-    ));
+    commands.spawn(PlatformBundle::type_one(Vec2 { x: 0.0, y: -200.0 }, size));
 }
