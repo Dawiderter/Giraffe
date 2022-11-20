@@ -2,9 +2,16 @@ use bevy::prelude::*;
 
 use crate::arena::WallMoveTarget;
 
-fn setup_camera(mut commands: Commands) {
-    commands.spawn((Camera2dBundle::default(), WallMoveTarget));
+pub fn camera_viewport_to_world() {
+    todo!()
 }
+
+fn setup_camera(mut commands: Commands) {
+    commands.spawn((Camera2dBundle::default(), WallMoveTarget, MainCamera));
+}
+
+#[derive(Component)]
+pub struct MainCamera;
 
 #[derive(Component)]
 pub struct CameraTarget;

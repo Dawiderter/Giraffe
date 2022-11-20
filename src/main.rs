@@ -2,12 +2,15 @@ use arena::ArenaPlugin;
 use bevy::prelude::*;
 use bevy_editor_pls::prelude::*;
 use bevy_rapier2d::prelude::*;
+use cursor::CursorWorldPosPlugin;
+use shooting_head::ShootingHeadSystem;
 
 mod arena;
-mod bendable_platform;
 mod on_floor;
 
 mod camera;
+
+mod cursor;
 
 use crate::giraffe::*;
 use crate::in_air::*;
@@ -23,7 +26,10 @@ use bevy_kira_audio::prelude::*;
 
 mod neck;
 
+mod shooting_head;
+
 mod giraffe;
+mod head;
 mod in_air;
 
 mod platform;
@@ -57,5 +63,7 @@ fn main() {
         .add_plugin(GiraffePlugin)
         .add_plugin(InAirPlugin)
         .add_plugin(OnFloorPlugin)
+        .add_plugin(CursorWorldPosPlugin)
+        .add_system(ShootingHeadSystem)
         .run();
 }
