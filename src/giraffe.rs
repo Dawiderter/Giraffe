@@ -102,69 +102,80 @@ fn giraffe_movement(
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
                 KeyCode::Space => {}
-                KeyCode::F => {
-                    if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
-                        if let Ok(cursor_pos) = cursor_pos.pos {
-                            let mut transform_copy = *head_transform;
-                            let (scale, rotation, translation) =
-                                head_glob_transform.to_scale_rotation_translation();
-                            transform_copy.translation = translation;
-                            transform_copy.rotation = transform_copy.rotation + rotation;
-                            transform_copy.scale = scale;
-                            let velocity = Vec2 {
-                                x: cursor_pos.normalize().x,
-                                y: cursor_pos.normalize().y,
-                            };
+                _ => {}
+            }
+        }
+    }
+}
 
-                            let ray_start = head_glob_transform.translation().truncate();
-                            let ray_dir = (head_glob_transform.translation()
-                                - transform.translation)
-                                .normalize()
-                                .truncate();
-                            let max_toi = 1000.0;
+fn neck_control_system(
+    mut query: Query<(Entity, &Giraffe, &Transform)>,
+    head_query: Query<(&Transform, &GlobalTransform), With<Head>>,
+    neck_query: Query<&Neck>,
+    keys: Res<Input<KeyCode>>,
+    cursor_pos: Res<CursorWorldPos>,
+    mut commands: Commands,
+    rapier_ctx: Res<RapierContext>,
+) {
+    for (e, g, transform) in query.iter_mut() {
+        if keys.just_pressed(KeyCode::F) {
+            if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
+                if let Ok(cursor_pos) = cursor_pos.pos {
+                    let mut transform_copy = *head_transform;
+                    let (scale, rotation, translation) =
+                        head_glob_transform.to_scale_rotation_translation();
+                    transform_copy.translation = translation;
+                    transform_copy.rotation = transform_copy.rotation + rotation;
+                    transform_copy.scale = scale;
+                    let velocity = Vec2 {
+                        x: cursor_pos.normalize().x,
+                        y: cursor_pos.normalize().y,
+                    };
 
-                            let ray_pos = ray_start + ray_dir;
+                    let ray_start = head_glob_transform.translation().truncate();
+                    let ray_dir = (head_glob_transform.translation() - transform.translation)
+                        .normalize()
+                        .truncate();
+                    let max_toi = 1000.0;
 
-                            if let Some((entity, toi)) = rapier_ctx.cast_ray(
-                                ray_pos,
-                                ray_dir,
-                                max_toi,
-                                false,
-                                QueryFilter::new().groups(InteractionGroups::all()),
-                            ) {
-                                let hit_point = ray_start + ray_dir * toi;
-                                if neck_query.iter().count() == 0 {
-                                    commands.spawn(NeckBundle::new(
-                                        hit_point,
-                                        transform.translation.truncate(),
-                                    ));
-                                    commands.get_entity(e).unwrap().insert(AngularVelocity {
-                                        radius: hit_point.distance(ray_start),
-                                        speed: 10.0
-                                            * if hit_point
-                                                .angle_between(Vec2 { x: 1.0, y: 1.0 })
-                                                .abs()
-                                                > PI / 2.0
-                                            {
-                                                1.0
-                                            } else {
-                                                -1.0
-                                            },
-                                        point: hit_point,
-                                    });
-                                    commands.entity(e).remove::<OnFloorBundle>().insert(
-                                        AddInAirBundle {
-                                            impulse: g.right_direction.perp() * g.jump_speed,
-                                        },
-                                    );
-                                }
-                            }
+                    let ray_pos = ray_start + ray_dir;
 
-                            commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
+                    if let Some((entity, toi)) = rapier_ctx.cast_ray(
+                        ray_pos,
+                        ray_dir,
+                        max_toi,
+                        false,
+                        QueryFilter::new().groups(InteractionGroups::all()),
+                    ) {
+                        let hit_point = ray_start + ray_dir * toi;
+                        if neck_query.iter().count() == 0 {
+                            commands.spawn(NeckBundle::new(
+                                hit_point,
+                                transform.translation.truncate(),
+                            ));
+                            commands.get_entity(e).unwrap().insert(AngularVelocity {
+                                radius: hit_point.distance(ray_start),
+                                speed: 10.0
+                                    * if hit_point.angle_between(Vec2 { x: 1.0, y: 1.0 }).abs()
+                                        > PI / 2.0
+                                    {
+                                        1.0
+                                    } else {
+                                        -1.0
+                                    },
+                                point: hit_point,
+                            });
+                            commands
+                                .entity(e)
+                                .remove::<OnFloorBundle>()
+                                .insert(AddInAirBundle {
+                                    impulse: g.right_direction.perp() * g.jump_speed,
+                                });
                         }
                     }
+
+                    commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
                 }
-                _ => {}
             }
         }
     }
@@ -189,12 +200,16 @@ fn giraffe_turn_system(
     mouse_pos: Res<CursorWorldPos>,
 ) {
     if let Ok((g, t)) = giraffe.get_single() {
-        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
+        if let Ok((mut transform, mut sprite)) = query.get_single_mut() {
             println!("{}", RIGHT_DIRECTION.perp().perp().perp());
             println!("{}", g.right_direction);
 
-            if g.right_direction.angle_between(RIGHT_DIRECTION.perp().perp().perp()) > 0.0 {
-                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            if g.right_direction
+                .angle_between(RIGHT_DIRECTION.perp().perp().perp())
+                > 0.0
+            {
+                transform.rotation =
+                    Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
             } else {
                 transform.rotation = Quat::from_rotation_z(
                     2.0 * PI - g.right_direction.angle_between(RIGHT_DIRECTION),
@@ -315,11 +330,11 @@ fn giraffe_hit_floor(
                         };
 
                         commands
-                        .entity(e)
-                        .remove::<InAirBundle>()
-                        .insert(AddOnFloorBundle {
-                            on_which_floor: other_collider,
-                        });
+                            .entity(e)
+                            .remove::<InAirBundle>()
+                            .insert(AddOnFloorBundle {
+                                on_which_floor: other_collider,
+                            });
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }
@@ -340,6 +355,7 @@ impl Plugin for GiraffePlugin {
             .add_system(giraffe_turn_system)
             .add_system(keep_neck_at_player_system)
             .add_system(remove_neck_system)
+            .add_system(neck_control_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
     }
