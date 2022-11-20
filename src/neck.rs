@@ -39,7 +39,15 @@ fn add_mesh(
     query: Query<Entity, Added<Neck>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    server: Res<AssetServer>
 ) {
+    let new_material = ColorMaterial {
+        texture : Some(server.load("zebra rozebrana/zyr_szyja_crop.png")),
+        ..default()
+    };
+
+    let new_material = materials.add(new_material);
+
     for entity in query.iter() {
         commands
             .get_entity(entity)
@@ -48,7 +56,7 @@ fn add_mesh(
                 mesh: meshes
                     .add(Mesh::new(PrimitiveTopology::TriangleStrip))
                     .into(),
-                material: materials.add(ColorMaterial::from(Color::YELLOW)),
+                material: new_material.clone(),
                 transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
                 ..default()
             });
@@ -126,6 +134,30 @@ impl NeckPoints {
         );
 
         res.push(last_split);
+
+        res
+    }
+
+    fn gen_uv(&self) -> Vec<(Vec2, Vec2)> {
+        let mut res = Vec::new();
+
+        let mut points = self.points.clone();
+        points.push(self.last_point);
+
+        let lens: Vec<f32> = points
+            .windows(2)
+            .map(|v| v[0].distance(v[1]))
+            .collect();
+        let combined_len: f32 = lens.iter().sum();
+
+        res.push((Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0)));
+        let mut curr_len = 0.;
+
+        for len in lens.iter() {
+            curr_len += len;
+            let progress = curr_len / combined_len;
+            res.push((Vec2::new(0.0, progress), Vec2::new(1.0, progress)));
+        }
 
         res
     }
@@ -249,13 +281,28 @@ fn neck_triangulate(
 
         let splits = points.split(NECK_WIDTH);
 
+        // dbg!(splits.len());
+        
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             splits
+            .iter()
+            .flat_map(|(v1, v2)| [*v1, *v2])
+            .map(|v| [v.x, v.y, 0.0])
+            .collect::<Vec<[f32; 3]>>(),
+        );
+        
+        let uvs = points.gen_uv();
+        
+        // dbg!(uvs.len());
+        
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_UV_0,
+            uvs
                 .iter()
                 .flat_map(|(v1, v2)| [*v1, *v2])
-                .map(|v| [v.x, v.y, 0.0])
-                .collect::<Vec<[f32; 3]>>(),
+                .map(|v| [v.x, v.y])
+                .collect::<Vec<[f32; 2]>>(),
         );
     }
 }

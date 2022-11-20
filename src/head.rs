@@ -22,13 +22,17 @@ impl HeadBundle {
                     z: 0.0,
                 }),
                 sprite: Sprite {
-                    color: Color::BLUE,
-                    custom_size: Some(Vec2 { x: 25., y: 25. }),
+                    custom_size: Some(Vec2 { x: 80., y: 80. }),
                     ..default()
                 },
                 ..default()
             },
         }
+    }
+
+    pub fn with_texture(mut self, texture: Handle<Image>) -> Self {
+        self.sprite.texture = texture;
+        self
     }
 }
 
