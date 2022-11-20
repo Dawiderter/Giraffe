@@ -1,14 +1,16 @@
 use crate::camera::CameraTarget;
 use crate::camera::MainCamera;
+use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
 use crate::on_floor::*;
+use crate::shooting_head::ShootingHead;
+use crate::shooting_head::ShootingHeadBundle;
 use bevy::prelude::*;
-use bevy::render::render_resource::PrimitiveTopology;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
 
 use crate::head::*;
-use crate::neck::{NeckPoints, NeckTarget};
+use crate::neck::NeckTarget;
 use crate::{in_air::InAir, neck::NeckBundle};
 
 #[derive(Component, Inspectable)]
@@ -58,8 +60,10 @@ fn giraffe_movement(
         ),
         With<OnFloor>,
     >,
+    head_query: Query<(&Transform, &GlobalTransform), With<Head>>,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
+    cursor_pos: Res<CursorWorldPos>,
     mut commands: Commands,
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
@@ -90,6 +94,24 @@ fn giraffe_movement(
                     );
                     commands.spawn(bundle);
                 }
+                KeyCode::F => {
+                    if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
+                        if let Ok(cursor_pos) = cursor_pos.pos {
+                            let mut transform_copy = *head_transform;
+                            let (scale, rotation, translation) =
+                                head_glob_transform.to_scale_rotation_translation();
+                            transform_copy.translation = translation;
+                            transform_copy.rotation = transform_copy.rotation + rotation;
+                            transform_copy.scale = scale;
+                            let velocity = Vec2 {
+                                x: cursor_pos.normalize().x,
+                                y: cursor_pos.normalize().y,
+                            } * 10.0;
+
+                            commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -97,35 +119,26 @@ fn giraffe_movement(
 }
 
 fn giraffe_turn_system(
-    windows: Res<Windows>,
     mut query: Query<(&mut Transform, &mut Collider), With<Giraffe>>,
     mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>)>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((camera, glob_transform)) = camera_query.get_single() {
-        let window = windows.get_primary().unwrap();
-        if let Some(cursor) = window.cursor_position() {
-            let window_size = Vec2 {
-                x: window.width(),
-                y: window.height(),
-            };
-            let ndc = (cursor / window_size) * 2.0 - Vec2::ONE;
-            let mouse_pos = camera.ndc_to_world(glob_transform, ndc.extend(0.0));
-            if let Ok((mut transform, mut collider)) = query.get_single_mut() {
-                if let Some(mouse_pos) = mouse_pos {
-                    if let Ok(mut head) = child_query.get_single_mut() {
-                        head.translation = mouse_pos;
-                        println!("{}, {}", head.translation.x, head.translation.y);
-                    }
-                    let looking_left = f32::signum(transform.scale.x);
-                    if looking_left < 0.0 && mouse_pos.x > transform.translation.x
-                        || looking_left > 0.0 && mouse_pos.x < transform.translation.x
-                    {
-                        transform.scale.x = -transform.scale.x;
-                        collider.set_scale(Vec2 { x: 1.0, y: 1.0 }, 100);
-                    };
-                }
+    if let Ok((mut transform, mut collider)) = query.get_single_mut() {
+        if let Ok(mouse_pos) = mouse_pos.pos {
+            if let Ok(mut head) = child_query.get_single_mut() {
+                head.translation.x = mouse_pos.x.abs();
+                head.translation.y = mouse_pos.y;
+                head.translation.z = 0.0;
+
+                head.translation = head.translation.normalize() * 100.0;
             }
+            let looking_left = f32::signum(transform.scale.x);
+            if looking_left < 0.0 && mouse_pos.x > transform.translation.x
+                || looking_left > 0.0 && mouse_pos.x < transform.translation.x
+            {
+                transform.scale.x = -transform.scale.x;
+                collider.set_scale(Vec2 { x: 1.0, y: 1.0 }, 100);
+            };
         }
     }
 }
