@@ -92,12 +92,12 @@ fn giraffe_movement(
                             impulse: g.right_direction.perp() * g.jump_speed,
                         });
                 }
-                KeyCode::A => {
-                    kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
-                }
-                KeyCode::D => {
-                    kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
-                }
+                // KeyCode::A => {
+                //     kcc.translation = Some(-g.right_direction * g.speed * time.delta_seconds());
+                // }
+                // KeyCode::D => {
+                //     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
+                // }
                 KeyCode::Space => {}
                 KeyCode::F => {
                     if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
