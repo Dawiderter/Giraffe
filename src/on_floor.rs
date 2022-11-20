@@ -28,7 +28,7 @@ fn add_on_floor_bundle (query: Query<(Entity, &AddOnFloorBundle)>, mut commands:
                 snap_to_ground: Some(CharacterLength::Absolute(0.0)),
                 ..default()
             },
-            colider: Collider::ball(100.0),
+            colider: Collider::ball(50.0),
         })
         .remove::<AddOnFloorBundle>();
     }
