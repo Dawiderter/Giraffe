@@ -1,6 +1,10 @@
+use std::f32::consts::PI;
+
 use crate::camera::CameraTarget;
+use crate::circular::AngularVelocity;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
+use crate::neck::Neck;
 use crate::neck::NeckPoints;
 use crate::on_floor::*;
 use crate::platform::*;
@@ -22,9 +26,6 @@ pub struct Giraffe {
     speed: f32,
     pub right_direction: Vec2,
 }
-
-#[derive(Component)]
-struct AngularVelocity(Vec2);
 
 #[derive(Component)]
 struct GiraffeNeckStart(Vec2);
@@ -69,6 +70,7 @@ fn giraffe_movement(
         With<OnFloor>,
     >,
     head_query: Query<(&Transform, &GlobalTransform), With<Head>>,
+    neck_query: Query<&Neck>,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
@@ -108,7 +110,10 @@ fn giraffe_movement(
                             };
 
                             let ray_start = head_glob_transform.translation().truncate();
-                            let ray_dir = head_glob_transform.translation().normalize().truncate();
+                            let ray_dir = (head_glob_transform.translation()
+                                - transform.translation)
+                                .normalize()
+                                .truncate();
                             let max_toi = 1000.0;
 
                             let ray_pos = ray_start + ray_dir;
@@ -122,10 +127,26 @@ fn giraffe_movement(
                             ) {
                                 let hit_point = ray_start + ray_dir * toi;
                                 println!("Entity {:?} hit at point {}", entity, hit_point);
-                                commands.spawn(NeckBundle::new(
-                                    hit_point,
-                                    transform.translation.truncate(),
-                                ));
+                                if neck_query.iter().count() == 0 {
+                                    commands.spawn(NeckBundle::new(
+                                        hit_point,
+                                        transform.translation.truncate(),
+                                    ));
+                                    commands.get_entity(e).unwrap().insert(AngularVelocity {
+                                        radius: hit_point.distance(ray_start),
+                                        speed: 10.0
+                                            * if hit_point
+                                                .angle_between(Vec2 { x: 1.0, y: 1.0 })
+                                                .abs()
+                                                > PI / 2.0
+                                            {
+                                                1.0
+                                            } else {
+                                                -1.0
+                                            },
+                                        point: hit_point,
+                                    });
+                                }
                             }
 
                             commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
@@ -163,6 +184,7 @@ fn head_turn_system(
                 head.translation = mouse_pos - transform.translation;
 
                 head.translation = head.translation.normalize() * 100.0;
+                head.translation.z = 0.0;
             }
         }
     }

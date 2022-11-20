@@ -2,6 +2,8 @@ use arena::ArenaPlugin;
 use bevy::prelude::*;
 use bevy_editor_pls::prelude::*;
 use bevy_rapier2d::prelude::*;
+use circular::angular_velocity_system;
+use circular::AngularPlugin;
 use cursor::CursorWorldPosPlugin;
 use shooting_head::ShootingHeadSystem;
 
@@ -11,6 +13,8 @@ mod on_floor;
 mod camera;
 
 mod cursor;
+
+mod circular;
 
 use crate::giraffe::*;
 use crate::in_air::*;
@@ -65,5 +69,6 @@ fn main() {
         .add_plugin(OnFloorPlugin)
         .add_plugin(CursorWorldPosPlugin)
         .add_system(ShootingHeadSystem)
+        .add_plugin(AngularPlugin)
         .run();
 }
