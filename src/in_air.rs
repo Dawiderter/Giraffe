@@ -41,10 +41,13 @@ pub struct AddInAirBundle {
 
 fn add_in_air_bundle (query: Query<(Entity, &AddInAirBundle)>, mut commands: Commands) {
     for (e, a) in query.iter() {
-        commands.entity(e).insert(InAirBundle {
+        commands.entity(e).insert((InAirBundle {
             impulse: ExternalImpulse{impulse: a.impulse, ..default()},
             ..default()
-        })
+        }, Restitution {
+                        coefficient: 1.,
+                        combine_rule: CoefficientCombineRule::Max,
+                    }))
         .remove::<AddInAirBundle>();
     }
 }
@@ -55,12 +58,21 @@ fn update_in_air_timer(mut query: Query<&mut InAir>, time: Res<Time>) {
     }
 }
 
+fn update_translation(removals: RemovedComponents<AddInAirBundle>, mut query: Query<&mut Transform>) {
+    for e in removals.iter() {
+        if query.contains(e) {
+            query.get_mut(e).unwrap().translation += Vec3{x: 1., y: 0.0, z: 0.0};
+        }
+    }
+}
+
 pub struct InAirPlugin;
 
 impl Plugin for InAirPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_system(add_in_air_bundle)
+            .add_system_to_stage(CoreStage::PreUpdate, add_in_air_bundle)
+            .add_system(update_translation)
             .add_system(update_in_air_timer);
             //DEBUG
     }

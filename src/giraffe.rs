@@ -165,7 +165,10 @@ fn giraffe_turn_system(
 ) {
     if let Ok((g, t)) = giraffe.get_single() {
         if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
-            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) > 0.0 {
+            println!("{}", RIGHT_DIRECTION.perp().perp().perp());
+            println!("{}", g.right_direction);
+
+            if g.right_direction.angle_between(RIGHT_DIRECTION.perp().perp().perp()) > 0.0 {
                 transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
             } else {
                 transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
@@ -241,12 +244,6 @@ fn giraffe_hit_floor(
                 };
 
                 if platforms.contains(other_collider) {
-                    commands
-                        .entity(e)
-                        .remove::<InAirBundle>()
-                        .insert(AddOnFloorBundle {
-                            on_which_floor: other_collider,
-                        });
                     if contact_pair.manifolds().last().unwrap().points().len() > 0 {
                         let point = if contact_pair.collider1() == e {
                             contact_pair
@@ -268,7 +265,12 @@ fn giraffe_hit_floor(
                                 .local_p2()
                         };
 
-                        println!("{}", point);
+                        commands
+                        .entity(e)
+                        .remove::<InAirBundle>()
+                        .insert(AddOnFloorBundle {
+                            on_which_floor: other_collider,
+                        });
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }
