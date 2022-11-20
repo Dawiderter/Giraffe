@@ -5,7 +5,7 @@ use crate::platform::PLATFORM_GROUP;
 
 const NECK_GROUP: Group = Group::GROUP_30;
 
-const NECK_WIDTH: f32 = 25.0;
+const NECK_WIDTH: f32 = 15.0;
 
 pub struct NeckPlugin;
 
@@ -145,8 +145,7 @@ impl NeckBendingPoints {
                 if target_point.distance(*point) < target_point.distance(close_point) {
                     closest_point = Some(*point);
                 }
-            }
-            else {
+            } else {
                 closest_point = Some(*point);
             }
         }
@@ -180,7 +179,11 @@ impl NeckBendingPoints {
 
 fn transform_bending_points(mut query: Query<(&Transform, &mut NeckBendingPoints)>) {
     for (trans, mut points) in query.iter_mut() {
-        points.transformed_points = points.points.iter().map(|point| trans.transform_point(point.extend(0.0)).truncate()).collect();
+        points.transformed_points = points
+            .points
+            .iter()
+            .map(|point| trans.transform_point(point.extend(0.0)).truncate())
+            .collect();
     }
 }
 
@@ -263,7 +266,7 @@ impl Plugin for NeckPlugin {
             // .add_system(neck_system)
             .add_system(neck_triangulate)
             .add_system(add_mesh)
-            .add_system(neck_mouse)
+            // .add_system(neck_mouse)
             .add_system(update_collision)
             .add_system(neck_bend_system)
             .add_system(transform_bending_points);
