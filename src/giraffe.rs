@@ -48,6 +48,9 @@ struct GiraffeBundle {
     locked: LockedAxes,
 }
 
+
+const NECK_NORMAL : f32 = 35.;
+
 impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
@@ -61,7 +64,7 @@ impl Default for GiraffeBundle {
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
-            neckstart: GiraffeNeckStart(Vec2 { x: 80.0, y: 80.0 }),
+            neckstart: GiraffeNeckStart(Vec2 { x: NECK_NORMAL, y: 0.0 }),
             locked: LockedAxes::ROTATION_LOCKED_Z,
         }
     }
@@ -133,7 +136,7 @@ fn neck_control_system(
                     let ray_dir = (head_glob_transform.translation() - transform.translation)
                         .normalize()
                         .truncate();
-                    let max_toi = 1000.0;
+                    let max_toi = 1500.0;
 
                     let ray_pos = ray_start + ray_dir;
 
@@ -192,11 +195,11 @@ fn keep_neck_at_player_system(
 }
 
 fn giraffe_turn_system(
-    giraffe: Query<(&Giraffe, &Transform)>,
+    mut giraffe: Query<(&Giraffe, &Transform, &mut GiraffeNeckStart)>,
     mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((g, t)) = giraffe.get_single() {
+    if let Ok((g, t, mut neck)) = giraffe.get_single_mut() {
         if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
             transform.rotation = Quat::from_rotation_arc_2d(RIGHT_DIRECTION.normalize(), g.right_direction.normalize());
 
@@ -207,7 +210,9 @@ fn giraffe_turn_system(
                     < PI / 2.0
                 {
                     sprite.flip_x = false;
+                    neck.0.x = -NECK_NORMAL;
                 } else {
+                    neck.0.x = NECK_NORMAL;
                     sprite.flip_x = true;
                 }
             }
@@ -246,9 +251,9 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
         .with_children(|parent| {
             parent.spawn((
                 SpriteBundle {
-                    texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
+                    texture: handles.load_untyped("zebra rozebrana/zyr_tlow_i_nogi_lustr.png").typed::<Image>(),
                     sprite: Sprite {
-                        custom_size: Some(Vec2 { x: 150.0, y: 150.0 }),
+                        custom_size: Some(Vec2 { x: 200.0, y: 150.0 }),
                         ..default()
                     },
                     ..default()
@@ -257,7 +262,7 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
             ));
         })
         .with_children(|parent| {
-            parent.spawn(HeadBundle::new());
+            parent.spawn(HeadBundle::new().with_texture(handles.load("zebra rozebrana/zyr_gl.png")));
         });
 }
 
