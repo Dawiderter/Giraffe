@@ -1,11 +1,9 @@
 use crate::camera::CameraTarget;
-use crate::camera::MainCamera;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
 use crate::neck::NeckPoints;
 use crate::on_floor::*;
 use crate::platform::*;
-use crate::shooting_head::ShootingHead;
 use crate::shooting_head::ShootingHeadBundle;
 use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
@@ -24,6 +22,9 @@ pub struct Giraffe {
     speed: f32,
     pub right_direction: Vec2,
 }
+
+#[derive(Component)]
+struct AngularVelocity(Vec2);
 
 #[derive(Component)]
 struct GiraffeNeckStart(Vec2);
@@ -91,11 +92,7 @@ fn giraffe_movement(
                 KeyCode::D => {
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
-                KeyCode::Space => {
-                    let bundle =
-                        NeckBundle::new(Vec2 { x: 5.0, y: 5.0 }, transform.translation.truncate());
-                    commands.spawn(bundle);
-                }
+                KeyCode::Space => {}
                 KeyCode::F => {
                     if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
                         if let Ok(cursor_pos) = cursor_pos.pos {
@@ -110,8 +107,8 @@ fn giraffe_movement(
                                 y: cursor_pos.normalize().y,
                             };
 
-                            let ray_start = head_transform.translation.truncate();
-                            let ray_dir = head_transform.translation.normalize().truncate();
+                            let ray_start = head_glob_transform.translation().truncate();
+                            let ray_dir = head_glob_transform.translation().normalize().truncate();
                             let max_toi = 1000.0;
 
                             let ray_pos = ray_start + ray_dir;
@@ -155,26 +152,18 @@ fn keep_neck_at_player_system(
     }
 }
 
-fn giraffe_turn_system(
-    mut query: Query<&mut Transform, (With<GiraffeSprite>, Without<Giraffe>)>,
+fn head_turn_system(
+    mut query: Query<&mut Transform, With<Giraffe>>,
     mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok( mut transform) = query.get_single_mut() {
+    if let Ok(transform) = query.get_single_mut() {
         if let Ok(mouse_pos) = mouse_pos.pos {
             if let Ok(mut head) = child_query.get_single_mut() {
-                head.translation.x = (transform.translation.x - mouse_pos.x).abs();
-                head.translation.y = mouse_pos.y;
-                head.translation.z = 0.0;
+                head.translation = mouse_pos - transform.translation;
 
                 head.translation = head.translation.normalize() * 100.0;
             }
-            let looking_left = f32::signum(transform.scale.x);
-            if looking_left < 0.0 && mouse_pos.x > transform.translation.x
-                || looking_left > 0.0 && mouse_pos.x < transform.translation.x
-            {
-                transform.scale.x = -transform.scale.x;
-            };
         }
     }
 }
@@ -191,16 +180,21 @@ fn spawn_giraffe(mut commands: Commands) {
             CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
         ))
         .with_children(|parent| {
-            parent.spawn((SpriteBundle {
-                sprite: Sprite {
-                    color: Color::YELLOW,
-                    custom_size: Some(Vec2 { x: 100., y: 100. }),
-                    ..default()
-                },
-                ..default()
-            },GiraffeSprite)).with_children(|parent| {
-                parent.spawn(HeadBundle::new());
-            });
+            parent
+                .spawn((
+                    SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::YELLOW,
+                            custom_size: Some(Vec2 { x: 100., y: 100. }),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    GiraffeSprite,
+                ))
+                .with_children(|parent| {
+                    parent.spawn(HeadBundle::new());
+                });
         });
 }
 
@@ -264,7 +258,7 @@ impl Plugin for GiraffePlugin {
         app.add_startup_system(spawn_giraffe)
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
-            .add_system(giraffe_turn_system)
+            .add_system(head_turn_system)
             .add_system(keep_neck_at_player_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
