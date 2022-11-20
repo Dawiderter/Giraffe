@@ -36,7 +36,9 @@ pub fn set_angular_point_system(
     for (entity, transform, mut angular) in query.iter_mut() {
         if let Ok(neck) = neck_query.get_single_mut() {
             angular.point = *neck.points.last().unwrap();
-            angular.radius = transform.translation.distance(angular.point.extend(0.0));
+            let new_radius = transform.translation.distance(angular.point.extend(0.0));
+            angular.speed *= angular.radius/new_radius;
+            angular.radius = new_radius;
         } else {
             commands
                 .get_entity(entity)

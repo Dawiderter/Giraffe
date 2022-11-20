@@ -93,7 +93,7 @@ pub fn giraffe_movement(
                         .entity(e)
                         .remove::<OnFloorBundle>()
                         .insert(AddInAirBundle {
-                            impulse: g.right_direction.perp() * g.jump_speed,
+                            impulse: 0. * g.right_direction.perp() * g.jump_speed,
                         });
                 }
                 KeyCode::A => {
@@ -110,7 +110,7 @@ pub fn giraffe_movement(
 }
 
 fn neck_control_system(
-    mut query: Query<(Entity, &Giraffe, &Transform)>,
+    mut query: Query<(Entity, &Giraffe, &GlobalTransform, &GiraffeNeckStart)>,
     head_query: Query<(&Transform, &GlobalTransform), With<Head>>,
     neck_query: Query<&Neck>,
     keys: Res<Input<KeyCode>>,
@@ -118,7 +118,7 @@ fn neck_control_system(
     mut commands: Commands,
     rapier_ctx: Res<RapierContext>,
 ) {
-    for (e, g, transform) in query.iter_mut() {
+    for (e, g, transform, neck_start) in query.iter_mut() {
         if keys.just_pressed(KeyCode::F) {
             if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
                 if let Ok(cursor_pos) = cursor_pos.pos {
@@ -128,21 +128,20 @@ fn neck_control_system(
                     transform_copy.translation = translation;
                     transform_copy.rotation = transform_copy.rotation + rotation;
                     transform_copy.scale = scale;
+
                     let velocity = Vec2 {
                         x: cursor_pos.normalize().x,
                         y: cursor_pos.normalize().y,
                     };
 
-                    let ray_start = head_glob_transform.translation().truncate();
-                    let ray_dir = (head_glob_transform.translation() - transform.translation)
-                        .normalize()
-                        .truncate();
+                    let ray_start = transform.translation().truncate();
+                    dbg!(ray_start);
+                    let ray_dir = (cursor_pos.truncate() - ray_start).normalize();
+                    dbg!(ray_dir);
                     let max_toi = 1500.0;
 
-                    let ray_pos = ray_start + ray_dir;
-
                     if let Some((entity, toi)) = rapier_ctx.cast_ray(
-                        ray_pos,
+                        ray_start,
                         ray_dir,
                         max_toi,
                         false,
@@ -153,13 +152,10 @@ fn neck_control_system(
                     ) {
                         let hit_point = ray_start + ray_dir * toi;
                         if neck_query.iter().count() == 0 {
-                            commands.spawn(NeckBundle::new(
-                                hit_point,
-                                transform.translation.truncate(),
-                            ));
+                            commands.spawn(NeckBundle::new(hit_point, neck_start.0));
                             commands.get_entity(e).unwrap().insert(AngularVelocity {
                                 radius: hit_point.distance(ray_start),
-                                speed: 10.0
+                                speed: 500. / hit_point.distance(ray_start)
                                     * if hit_point.angle_between(Vec2 { x: 1.0, y: 1.0 }).abs()
                                         > PI / 2.0
                                     {
@@ -173,7 +169,7 @@ fn neck_control_system(
                                 .entity(e)
                                 .remove::<OnFloorBundle>()
                                 .insert(AddInAirBundle {
-                                    impulse: g.right_direction.perp() * g.jump_speed,
+                                    impulse: 0. * g.right_direction.perp() * g.jump_speed,
                                 });
                         }
                     }
@@ -217,9 +213,9 @@ fn giraffe_turn_system(
                     < PI / 2.0
                 {
                     sprite.flip_x = false;
-                    neck.0.x = -NECK_NORMAL;
+                    neck.0 = NECK_NORMAL * g.right_direction;
                 } else {
-                    neck.0.x = NECK_NORMAL;
+                    neck.0 = -NECK_NORMAL * g.right_direction;
                     sprite.flip_x = true;
                 }
             }
