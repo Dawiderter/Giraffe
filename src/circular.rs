@@ -13,9 +13,9 @@ pub struct AngularVelocity {
 pub struct AngularPlugin;
 
 pub fn angular_velocity_system(
-    mut query: Query<(&mut Transform, &mut ExternalImpulse, &AngularVelocity)>,
+    mut query: Query<(&mut Transform, &AngularVelocity)>,
 ) {
-    for (mut transform, mut impulse, angular) in query.iter_mut() {
+    for (mut transform, angular) in query.iter_mut() {
         let perp = transform.translation - angular.point.extend(0.0);
         let perp = Vec2 {
             x: -perp.y,
