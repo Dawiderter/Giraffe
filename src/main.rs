@@ -1,17 +1,23 @@
 use arena::ArenaPlugin;
 use bevy::prelude::*;
+use bevy::render::render_resource::Texture;
 use bevy_editor_pls::prelude::*;
 use bevy_rapier2d::prelude::*;
 use circular::angular_velocity_system;
 use circular::AngularPlugin;
 use cursor::CursorWorldPosPlugin;
+use platform_spawner::PlatformSpawnerPlugin;
 use shooting_head::ShootingHeadSystem;
 
 mod arena;
 mod on_floor;
 
+mod platform_spawner;
+
 mod camera;
 
+// mod parallax;
+//
 mod cursor;
 
 mod circular;
@@ -72,7 +78,7 @@ fn main() {
         .add_plugin(AudioPlugin)
         .add_plugin(CameraPlugin)
         .add_plugin(NeckPlugin)
-        .add_startup_system(spawn_platform)
+        // .add_startup_system(spawn_platform)
         .add_plugin(EditorPlugin)
         .add_plugin(GiraffePlugin)
         .add_plugin(InAirPlugin)
@@ -80,5 +86,6 @@ fn main() {
         .add_plugin(CursorWorldPosPlugin)
         .add_system(ShootingHeadSystem)
         .add_plugin(AngularPlugin)
+        .add_plugin(PlatformSpawnerPlugin)
         .run();
 }

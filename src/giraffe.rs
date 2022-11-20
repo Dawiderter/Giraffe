@@ -195,7 +195,7 @@ fn giraffe_turn_system(
     mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((g, t)) = giraffe.get_single() {
+    if let Ok((g, t, mut neckstart)) = giraffe.get_single_mut() {
         if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
             transform.rotation = Quat::from_rotation_arc_2d(RIGHT_DIRECTION.normalize(), g.right_direction.normalize());
 
