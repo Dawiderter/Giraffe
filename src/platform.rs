@@ -6,7 +6,7 @@ pub const PLATFORM_GROUP: bevy_rapier2d::rapier::geometry::Group =
     bevy_rapier2d::rapier::geometry::Group::GROUP_15;
 
 #[derive(Component)]
-struct Platform;
+pub struct Platform;
 
 #[derive(Bundle)]
 pub struct PlatformBundle {
@@ -48,7 +48,7 @@ pub fn spawn_platform(mut commands: Commands) {
     commands.spawn(PlatformBundle::type_one(Vec2 { x: 150.0, y: 300.0 }, size));
     commands.spawn(PlatformBundle::type_one(
         Vec2 {
-            x: -100.0,
+            x: 0.0,
             y: -100.0,
         },
         size,

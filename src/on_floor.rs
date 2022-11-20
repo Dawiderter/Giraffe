@@ -3,7 +3,9 @@ use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
 
 #[derive(Component, Inspectable)]
-pub struct  OnFloor;
+pub struct  OnFloor{
+    pub on_which_floor: Entity,
+}
 
 #[derive(Bundle)]
 pub struct OnFloorBundle {
@@ -12,22 +14,23 @@ pub struct OnFloorBundle {
     colider: Collider,
 }
 
-impl Default for OnFloorBundle {
-    fn default() -> Self {
-        Self {
-            on_floor: OnFloor,
-            character_controller: KinematicCharacterController::default(),
-            colider: Collider::ball(100.0),
-        }
-    }
+#[derive(Component)]
+pub struct AddOnFloorBundle {
+    pub on_which_floor: Entity,
 }
 
-#[derive(Component)]
-pub struct AddOnFloorBundle;
-
-fn add_on_floor_bundle (query: Query<Entity, With<AddOnFloorBundle>>, mut commands: Commands) {
-    for e in query.iter() {
-        commands.entity(e).insert(OnFloorBundle::default())
+fn add_on_floor_bundle (query: Query<(Entity, &AddOnFloorBundle)>, mut commands: Commands) {
+    for (e, a) in query.iter() {
+        commands.entity(e).insert(OnFloorBundle {
+            on_floor: OnFloor { 
+                on_which_floor:  a.on_which_floor
+            },
+            character_controller: KinematicCharacterController{
+                snap_to_ground: Some(CharacterLength::Absolute(0.0)),
+                ..default()
+            },
+            colider: Collider::ball(100.0),
+        })
         .remove::<AddOnFloorBundle>();
     }
 }
