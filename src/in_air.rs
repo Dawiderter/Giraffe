@@ -21,7 +21,7 @@ impl Default for InAirBundle {
         Self {
             in_air: InAir { 
                 timer: Timer::new(
-                    Duration::from_secs_f32(1.0), 
+                    Duration::from_secs_f32(0.1), 
                 TimerMode::Once)},
             righitbody: RigidBody::Dynamic,
             impulse: ExternalImpulse {

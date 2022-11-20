@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::f32::consts::PI;
 
 use crate::camera::CameraTarget;
@@ -19,6 +20,7 @@ use crate::{in_air::InAir, neck::NeckBundle};
 
 const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
     bevy_rapier2d::rapier::geometry::Group::GROUP_1;
+const RIGHT_DIRECTION: Vec2 = Vec2 { x: 1.0, y: 0.0 };
 
 #[derive(Component, Inspectable)]
 pub struct Giraffe {
@@ -39,6 +41,7 @@ struct GiraffeBundle {
     event: ActiveEvents,
     sleep: Sleeping,
     neckstart: GiraffeNeckStart,
+    locked: LockedAxes,
 }
 
 impl Default for GiraffeBundle {
@@ -50,11 +53,12 @@ impl Default for GiraffeBundle {
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
-                right_direction: Vec2 { x: 1.0, y: 0.0 },
+                right_direction: RIGHT_DIRECTION,
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
             neckstart: GiraffeNeckStart(Vec2 { x: 80.0, y: 80.0 }),
+            locked: LockedAxes::ROTATION_LOCKED_Z,
         }
     }
 }
@@ -173,6 +177,31 @@ fn keep_neck_at_player_system(
     }
 }
 
+fn giraffe_turn_system(
+    giraffe: Query<(&Giraffe, &Transform)>,
+    mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
+    mouse_pos: Res<CursorWorldPos>,
+) {
+    if let Ok((g, t)) = giraffe.get_single() {
+        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
+            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) > 0.0 {
+                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            } else {
+                transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
+            }
+
+            if let Ok(mouse_pos) = mouse_pos.pos {
+                if g.right_direction.angle_between(mouse_pos.truncate() - t.translation.truncate()).abs() < PI/2.0 {
+                    sprite.flip_x = false;
+                } else {
+                    sprite.flip_x = true;
+                }
+            }
+        }
+    }
+}
+
+
 fn head_turn_system(
     mut query: Query<&mut Transform, With<Giraffe>>,
     mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
@@ -193,7 +222,7 @@ fn head_turn_system(
 #[derive(Component)]
 struct GiraffeSprite;
 
-fn spawn_giraffe(mut commands: Commands) {
+fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
     commands
         .spawn((
             GiraffeBundle::default(),
@@ -202,21 +231,17 @@ fn spawn_giraffe(mut commands: Commands) {
             CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
         ))
         .with_children(|parent| {
-            parent
-                .spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            color: Color::YELLOW,
-                            custom_size: Some(Vec2 { x: 100., y: 100. }),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    GiraffeSprite,
-                ))
-                .with_children(|parent| {
-                    parent.spawn(HeadBundle::new());
-                });
+            parent.spawn((SpriteBundle {
+                texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
+                sprite: Sprite {
+                    custom_size: Some(Vec2{x:150.0, y: 150.0}),
+                    ..default()
+                },
+                ..default()
+            },GiraffeSprite));
+            })
+        .with_children(|parent| {
+            parent.spawn(HeadBundle::new());
         });
 }
 
@@ -281,6 +306,7 @@ impl Plugin for GiraffePlugin {
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
             .add_system(head_turn_system)
+            .add_system(giraffe_turn_system)
             .add_system(keep_neck_at_player_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
