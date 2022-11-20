@@ -165,14 +165,7 @@ fn giraffe_turn_system(
 ) {
     if let Ok((g, t)) = giraffe.get_single() {
         if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
-            println!("{}", RIGHT_DIRECTION.perp().perp().perp());
-            println!("{}", g.right_direction);
-
-            if g.right_direction.angle_between(RIGHT_DIRECTION.perp().perp().perp()) > 0.0 {
-                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
-            } else {
-                transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
-            }
+            transform.rotation = Quat::from_rotation_arc_2d(RIGHT_DIRECTION.normalize(), g.right_direction.normalize());
 
             if let Ok(mouse_pos) = mouse_pos.pos {
                 if g.right_direction.angle_between(mouse_pos.truncate() - t.translation.truncate()).abs() < PI/2.0 {

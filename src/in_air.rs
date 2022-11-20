@@ -28,7 +28,7 @@ impl Default for InAirBundle {
                 impulse: Vec2 { x: 0.0, y: -100.0 }, 
                 ..default()
                 },
-            colider: Collider::ball(100.0),
+            colider: Collider::ball(50.0),
             gravity_scale: GravityScale(0.0),
         }
     }
