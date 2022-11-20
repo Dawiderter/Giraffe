@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::KinematicCharacterController;
 
 use crate::neck::NeckPoints;
 
@@ -11,17 +12,17 @@ pub struct AngularVelocity {
 
 pub struct AngularPlugin;
 
-pub fn angular_velocity_system(mut query: Query<(&mut Transform, &AngularVelocity)>) {
-    for (mut transform, angular) in query.iter_mut() {
+pub fn angular_velocity_system(mut query: Query<(&mut Transform, &mut KinematicCharacterController,
+ &AngularVelocity)>) {
+    for (mut transform, mut kcc, angular) in query.iter_mut() {
         let perp = transform.translation - angular.point.extend(0.0);
-        let perp = Vec3 {
+        let perp = Vec2 {
             x: -perp.y,
             y: perp.x,
-            z: 0.0,
         }
         .normalize()
             * angular.speed;
-        transform.translation += perp;
+        kcc.translation = Some(perp);
     }
 }
 

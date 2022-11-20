@@ -287,8 +287,6 @@ fn giraffe_hit_floor(
                                 .unwrap()
                                 .local_p2()
                         };
-
-                        println!("{}", point);
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }
