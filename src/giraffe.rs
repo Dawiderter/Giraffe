@@ -2,6 +2,7 @@ use crate::camera::CameraTarget;
 use crate::in_air::*;
 use crate::neck::NeckTarget;
 use crate::on_floor::*;
+use crate::platform::*;
 use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
@@ -10,22 +11,24 @@ use bevy_rapier2d::prelude::*;
 struct Giraffe {
     jump_speed: f32,
     speed: f32,
-    right_direction: Vec2,
+    pub right_direction: Vec2,
 }
 
 #[derive(Bundle)]
 struct GiraffeBundle {
     name: Name,
-    on_floor: OnFloorBundle,
+    in_air: InAirBundle,
     giraffe: Giraffe,
     sprite: SpriteBundle,
+    event: ActiveEvents,
+    sleep: Sleeping,
 }
 
 impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
             name: Name::new("Giraffe"),
-            on_floor: OnFloorBundle::default(),
+            in_air: InAirBundle::default(),
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
@@ -39,6 +42,8 @@ impl Default for GiraffeBundle {
                 },
                 ..default()
             },
+            event: ActiveEvents::COLLISION_EVENTS,
+            sleep: Sleeping::disabled(),
         }
     }
 }
@@ -49,7 +54,6 @@ fn giraffe_movement(
             Entity,
             &Giraffe,
             &mut KinematicCharacterController,
-            &Transform,
         ),
         With<OnFloor>,
     >,
@@ -57,7 +61,7 @@ fn giraffe_movement(
     keys: Res<Input<KeyCode>>,
     mut commands: Commands,
 ) {
-    for (e, g, mut kcc, transform) in query.iter_mut() {
+    for (e, g, mut kcc) in query.iter_mut() {
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
@@ -86,16 +90,42 @@ fn spawn_giraffe(mut commands: Commands) {
 }
 
 fn giraffe_hit_floor(
-    mut query: Query<(Entity, &InAir, &mut Giraffe)>,
-    keys: Res<Input<KeyCode>>,
+    mut giraffe: Query<(Entity, &InAir, &Transform, &mut Giraffe)>,
+    platforms: Query<(&Platform, &Transform)>,
+    rapier_context: Res<RapierContext>,
     mut commands: Commands,
 ) {
-    for (e, ai, mut g) in query.iter_mut() {
-        for k in keys.get_pressed() {
-            // TODO
+    for (e, ia, t, mut g) in giraffe.iter_mut() {
+        if ia.timer.finished() {
+            for contact_pair in rapier_context.contacts_with(e) {
+                let other_collider = if contact_pair.collider1() == e {
+                    contact_pair.collider2()
+                } else {
+                    contact_pair.collider1()
+                };
+        
+                if platforms.contains(other_collider) {
+                    commands.entity(e)
+                        .remove::<InAirBundle>()
+                        .insert(AddOnFloorBundle {
+                            on_which_floor: other_collider,
+                        });
+                    let point = 
+                    if contact_pair.collider1() == e {
+                        contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p1()
+                    } else {
+                        contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p2()
+                    };
+
+                    println!("{}", point);
+                    g.right_direction = point.perp();
+                    return;
+                }
+            }
         }
     }
 }
+
 pub struct GiraffePlugin;
 
 impl Plugin for GiraffePlugin {

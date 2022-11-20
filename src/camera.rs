@@ -15,10 +15,8 @@ fn camera_movement_system(
 ) {
     let target_avg_y = target_query.single().translation.y;
 
-    for mut camera_trans in camera_query.iter_mut() {
-        if target_avg_y > camera_trans.translation.y {
-            camera_trans.translation.y = target_avg_y;
-        }
+    for mut camera_trans in camera_query.iter_mut() {        
+        camera_trans.translation.y = target_avg_y;
     }
 }
 

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
-struct Platform;
+pub struct Platform;
 
 #[derive(Bundle)]
 pub struct PlatformBundle {
@@ -40,7 +40,15 @@ pub fn spawn_platform(mut commands: Commands) {
     commands
         .spawn(
             PlatformBundle::type_one(Vec2 { x: 300.0, y: 0.0 }, size)
-                .with_start_pos(Vec2 { x: 300.0, y: 0.0 }),
+                .with_start_pos(Vec2 { x: 0.0, y: -300.0 }),
+        )
+        .with_children(|parent| {
+            parent.spawn(NeckBendingPoints::from_rectangle(size));
+        });
+        commands
+        .spawn(
+            PlatformBundle::type_one(Vec2 { x: 300.0, y: 0.0 }, size)
+                .with_start_pos(Vec2 { x: 0.0, y: 300.0 }),
         )
         .with_children(|parent| {
             parent.spawn(NeckBendingPoints::from_rectangle(size));
