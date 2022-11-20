@@ -3,7 +3,7 @@ use bevy_rapier2d::{prelude::*, rapier::prelude::Group};
 
 use crate::platform::PLATFORM_GROUP;
 
-const NECK_GROUP : Group = Group::GROUP_30;
+const NECK_GROUP: Group = Group::GROUP_30;
 
 const NECK_WIDTH: f32 = 25.0;
 
@@ -133,57 +133,86 @@ impl NeckPoints {
 
 #[derive(Component)]
 pub struct NeckBendingPoints {
-    pub points: Vec<Vec3>,
+    pub points: Vec<Vec2>,
+    pub transformed_points: Vec<Vec2>,
 }
 
 impl NeckBendingPoints {
+    pub fn closest_point(&self, target_point: Vec2) -> Option<Vec2> {
+        let mut closest_point = None;
+        for point in &self.transformed_points {
+            if let Some(close_point) = closest_point {
+                if target_point.distance(*point) < target_point.distance(close_point) {
+                    closest_point = Some(*point);
+                }
+            }
+            else {
+                closest_point = Some(*point);
+            }
+        }
+        closest_point
+    }
+
     pub fn from_rectangle(hxhy: Vec2) -> Self {
         NeckBendingPoints {
             points: vec![
                 Vec2 {
                     x: -hxhy.x / 2.0,
                     y: hxhy.y / 2.0,
-                }
-                .extend(1.0),
+                },
                 Vec2 {
                     x: hxhy.x / 2.0,
                     y: hxhy.y / 2.0,
-                }
-                .extend(1.0),
+                },
                 Vec2 {
                     x: hxhy.x / 2.0,
                     y: -hxhy.y / 2.0,
-                }
-                .extend(1.0),
+                },
                 Vec2 {
                     x: -hxhy.x / 2.0,
                     y: -hxhy.y / 2.0,
-                }
-                .extend(1.0),
+                },
             ],
+            transformed_points: Vec::new(),
         }
     }
 }
 
-fn neck_bend_system(mut neck_query: Query<&mut NeckPoints>, rapier_ctx: Res<RapierContext>) {
+fn transform_bending_points(mut query: Query<(&Transform, &mut NeckBendingPoints)>) {
+    for (trans, mut points) in query.iter_mut() {
+        points.transformed_points = points.points.iter().map(|point| trans.transform_point(point.extend(0.0)).truncate()).collect();
+    }
+}
+
+fn neck_bend_system(
+    mut neck_query: Query<&mut NeckPoints>,
+    points_query: Query<&NeckBendingPoints>,
+    rapier_ctx: Res<RapierContext>,
+) {
     for mut neck in neck_query.iter_mut() {
         let ray_start = neck.points[neck.points.len() - 1];
         let ray_end = neck.last_point - ray_start;
         let ray_dir = ray_end.normalize();
         let max_toi = ray_end.x / ray_dir.x;
 
-        let ray_pos = ray_start + ray_dir;
+        let ray_pos = ray_start + ray_dir * 10.;
 
         if let Some((entity, toi)) = rapier_ctx.cast_ray(
             ray_pos,
             ray_dir,
             max_toi,
             false,
-            QueryFilter::new().groups(InteractionGroups::none().with_memberships(NECK_GROUP).with_filter(PLATFORM_GROUP)),
+            QueryFilter::new().groups(
+                InteractionGroups::none()
+                    .with_memberships(NECK_GROUP)
+                    .with_filter(PLATFORM_GROUP),
+            ),
         ) {
             let hit_point = ray_start + ray_dir * toi;
-            println!("Entity {:?} hit at point {}", entity, hit_point);
-            neck.add_point(hit_point);
+            if let Ok(points) = points_query.get(entity) {
+                let point = points.closest_point(hit_point).unwrap();
+                neck.add_point(point);
+            }
         }
     }
 }
@@ -236,6 +265,7 @@ impl Plugin for NeckPlugin {
             .add_system(add_mesh)
             .add_system(neck_mouse)
             .add_system(update_collision)
-            .add_system(neck_bend_system);
+            .add_system(neck_bend_system)
+            .add_system(transform_bending_points);
     }
 }

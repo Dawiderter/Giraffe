@@ -3,6 +3,7 @@ use crate::camera::MainCamera;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
 use crate::on_floor::*;
+use crate::platform::*;
 use crate::shooting_head::ShootingHead;
 use crate::shooting_head::ShootingHeadBundle;
 use bevy::prelude::*;
@@ -20,22 +21,24 @@ const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
 struct Giraffe {
     jump_speed: f32,
     speed: f32,
-    right_direction: Vec2,
+    pub right_direction: Vec2,
 }
 
 #[derive(Bundle)]
 struct GiraffeBundle {
     name: Name,
-    on_floor: OnFloorBundle,
+    in_air: InAirBundle,
     giraffe: Giraffe,
     sprite: SpriteBundle,
+    event: ActiveEvents,
+    sleep: Sleeping,
 }
 
 impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
             name: Name::new("Giraffe"),
-            on_floor: OnFloorBundle::default(),
+            in_air: InAirBundle::default(),
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
@@ -49,6 +52,8 @@ impl Default for GiraffeBundle {
                 },
                 ..default()
             },
+            event: ActiveEvents::COLLISION_EVENTS,
+            sleep: Sleeping::disabled(),
         }
     }
 }
@@ -68,6 +73,7 @@ fn giraffe_movement(
     keys: Res<Input<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
     mut commands: Commands,
+    rapier_ctx: Res<RapierContext>,
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
         for k in keys.get_pressed() {
@@ -103,7 +109,24 @@ fn giraffe_movement(
                             let velocity = Vec2 {
                                 x: cursor_pos.normalize().x,
                                 y: cursor_pos.normalize().y,
-                            } * 10.0;
+                            };
+
+                            let ray_start = transform.translation.truncate();
+                            let ray_dir = head_transform.translation.normalize().truncate();
+                            let max_toi = 1000.0;
+
+                            let ray_pos = ray_start + ray_dir;
+
+                            if let Some((entity, toi)) = rapier_ctx.cast_ray(
+                                ray_pos,
+                                ray_dir,
+                                max_toi,
+                                false,
+                                QueryFilter::new().groups(InteractionGroups::all()),
+                            ) {
+                                let hit_point = ray_start + ray_dir * toi;
+                                println!("Entity {:?} hit at point {}", entity, hit_point);
+                            }
 
                             commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
                         }
@@ -123,8 +146,8 @@ fn giraffe_turn_system(
     if let Ok((mut transform, mut collider)) = query.get_single_mut() {
         if let Ok(mouse_pos) = mouse_pos.pos {
             if let Ok(mut head) = child_query.get_single_mut() {
-                head.translation.x = mouse_pos.x.abs();
-                head.translation.y = mouse_pos.y;
+                head.translation.x = (transform.translation.x - mouse_pos.x).abs();
+                head.translation.y = (mouse_pos.y);
                 head.translation.z = 0.0;
 
                 head.translation = head.translation.normalize() * 100.0;
@@ -154,16 +177,44 @@ fn spawn_giraffe(mut commands: Commands) {
 }
 
 fn giraffe_hit_floor(
-    mut query: Query<(Entity, &InAir, &mut Giraffe)>,
-    keys: Res<Input<KeyCode>>,
+    mut giraffe: Query<(Entity, &InAir, &Transform, &mut Giraffe)>,
+    platforms: Query<(&Platform, &Transform)>,
+    rapier_context: Res<RapierContext>,
     mut commands: Commands,
 ) {
-    for (e, ai, mut g) in query.iter_mut() {
-        for k in keys.get_pressed() {
-            // TODO
+    for (e, ia, t, mut g) in giraffe.iter_mut() {
+        if ia.timer.finished() {
+            for contact_pair in rapier_context.contacts_with(e) {
+                let other_collider = if contact_pair.collider1() == e {
+                    contact_pair.collider2()
+                } else {
+                    contact_pair.collider1()
+                };
+        
+                if platforms.contains(other_collider) {
+                    commands.entity(e)
+                        .remove::<InAirBundle>()
+                        .insert(AddOnFloorBundle {
+                            on_which_floor: other_collider,
+                        });
+                    if contact_pair.manifolds().last().unwrap().points().len() > 0 {
+                        let point = 
+                        if contact_pair.collider1() == e {
+                            contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p1()
+                        } else {
+                            contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p2()
+                        };
+    
+                        println!("{}", point);
+                        g.right_direction = point.clamp_length(1.0, 1.0).perp();
+                    }
+                    return;
+                }
+            }
         }
     }
 }
+
 pub struct GiraffePlugin;
 
 impl Plugin for GiraffePlugin {

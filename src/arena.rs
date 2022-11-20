@@ -89,30 +89,30 @@ fn auto_move_walls(
 #[derive(Component)]
 pub struct Ball;
 
-fn test_ball(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let radius = 50.;
+// fn test_ball(
+//     mut commands: Commands,
+//     mut meshes: ResMut<Assets<Mesh>>,
+//     mut materials: ResMut<Assets<ColorMaterial>>,
+// ) {
+//     let radius = 50.;
 
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(radius).into()).into(),
-            material: materials.add(ColorMaterial::from(Color::ORANGE_RED)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
-            ..default()
-        },
-        Collider::ball(radius),
-        RigidBody::Dynamic,
-        Restitution {
-            coefficient: 1.,
-            combine_rule: CoefficientCombineRule::Max,
-        },
-        ExternalForce::default(),
-        Ball,
-    ));
-}
+//     commands.spawn((
+//         MaterialMesh2dBundle {
+//             mesh: meshes.add(shape::Circle::new(radius).into()).into(),
+//             material: materials.add(ColorMaterial::from(Color::ORANGE_RED)),
+//             transform: Transform::from_translation(Vec3::new(0., 0., 0.)),
+//             ..default()
+//         },
+//         Collider::ball(radius),
+//         RigidBody::Dynamic,
+//         Restitution {
+//             coefficient: 1.,
+//             combine_rule: CoefficientCombineRule::Max,
+//         },
+//         ExternalForce::default(),
+//         Ball,
+//     ));
+// }
 
 fn test_ball_movement(
     mut query: Query<&mut ExternalForce, With<Ball>>,
@@ -133,7 +133,7 @@ impl Plugin for ArenaPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_floor)
             .add_startup_system(setup_walls)
-            .add_startup_system(test_ball)
+            //.add_startup_system(test_ball)
             .add_system(test_ball_movement)
             .add_system(auto_move_walls);
     }
