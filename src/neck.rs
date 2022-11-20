@@ -3,7 +3,7 @@ use bevy_rapier2d::{prelude::*, rapier::prelude::Group};
 
 use crate::platform::PLATFORM_GROUP;
 
-const NECK_GROUP : Group = Group::GROUP_30;
+const NECK_GROUP: Group = Group::GROUP_30;
 
 const NECK_WIDTH: f32 = 25.0;
 
@@ -179,7 +179,11 @@ fn neck_bend_system(mut neck_query: Query<&mut NeckPoints>, rapier_ctx: Res<Rapi
             ray_dir,
             max_toi,
             false,
-            QueryFilter::new().groups(InteractionGroups::none().with_memberships(NECK_GROUP).with_filter(PLATFORM_GROUP)),
+            QueryFilter::new().groups(
+                InteractionGroups::none()
+                    .with_memberships(NECK_GROUP)
+                    .with_filter(PLATFORM_GROUP),
+            ),
         ) {
             let hit_point = ray_start + ray_dir * toi;
             println!("Entity {:?} hit at point {}", entity, hit_point);

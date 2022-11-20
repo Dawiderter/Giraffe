@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+const FLY_SPEED: f32 = 10.0;
+
 #[derive(Component)]
 pub struct ShootingHead(Vec2);
 
@@ -20,7 +22,7 @@ pub fn ShootingHeadSystem(mut query: Query<(&mut Transform, &ShootingHead)>) {
 impl ShootingHeadBundle {
     pub fn new(transform: Transform, velocity: Vec2) -> Self {
         ShootingHeadBundle {
-            head: ShootingHead(velocity),
+            head: ShootingHead(velocity * FLY_SPEED),
             sprite: SpriteBundle {
                 sprite: Sprite {
                     color: Color::RED,

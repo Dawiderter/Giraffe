@@ -68,6 +68,7 @@ fn giraffe_movement(
     keys: Res<Input<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
     mut commands: Commands,
+    rapier_ctx: Res<RapierContext>,
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
         for k in keys.get_pressed() {
@@ -103,7 +104,24 @@ fn giraffe_movement(
                             let velocity = Vec2 {
                                 x: cursor_pos.normalize().x,
                                 y: cursor_pos.normalize().y,
-                            } * 10.0;
+                            };
+
+                            let ray_start = transform.translation.truncate();
+                            let ray_dir = head_transform.translation.normalize().truncate();
+                            let max_toi = 1000.0;
+
+                            let ray_pos = ray_start + ray_dir;
+
+                            if let Some((entity, toi)) = rapier_ctx.cast_ray(
+                                ray_pos,
+                                ray_dir,
+                                max_toi,
+                                false,
+                                QueryFilter::new().groups(InteractionGroups::all()),
+                            ) {
+                                let hit_point = ray_start + ray_dir * toi;
+                                println!("Entity {:?} hit at point {}", entity, hit_point);
+                            }
 
                             commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
                         }
@@ -123,8 +141,8 @@ fn giraffe_turn_system(
     if let Ok((mut transform, mut collider)) = query.get_single_mut() {
         if let Ok(mouse_pos) = mouse_pos.pos {
             if let Ok(mut head) = child_query.get_single_mut() {
-                head.translation.x = mouse_pos.x.abs();
-                head.translation.y = mouse_pos.y;
+                head.translation.x = (transform.translation.x - mouse_pos.x).abs();
+                head.translation.y = (mouse_pos.y);
                 head.translation.z = 0.0;
 
                 head.translation = head.translation.normalize() * 100.0;
