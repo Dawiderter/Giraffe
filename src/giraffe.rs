@@ -16,6 +16,7 @@ use crate::{in_air::InAir, neck::NeckBundle};
 
 const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
     bevy_rapier2d::rapier::geometry::Group::GROUP_1;
+const RIGHT_DIRECTION: Vec2 = Vec2 { x: 1.0, y: 0.0 };
 
 #[derive(Component, Inspectable)]
 struct Giraffe {
@@ -43,7 +44,7 @@ impl Default for GiraffeBundle {
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
-                right_direction: Vec2 { x: 1.0, y: 0.0 },
+                right_direction: RIGHT_DIRECTION,
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
@@ -114,25 +115,29 @@ fn giraffe_movement(
 }
 
 fn giraffe_turn_system(
+    giraffe: Query<&Giraffe>,
     mut query: Query<&mut Transform, (With<GiraffeSprite>, Without<Giraffe>)>,
     mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok( mut transform) = query.get_single_mut() {
-        if let Ok(mouse_pos) = mouse_pos.pos {
-            if let Ok(mut head) = child_query.get_single_mut() {
-                head.translation.x = mouse_pos.x.abs();
-                head.translation.y = mouse_pos.y;
-                head.translation.z = 0.0;
-
-                head.translation = head.translation.normalize() * 100.0;
-            }
-            let looking_left = f32::signum(transform.scale.x);
-            if looking_left < 0.0 && mouse_pos.x > transform.translation.x
-                || looking_left > 0.0 && mouse_pos.x < transform.translation.x
-            {
-                transform.scale.x = -transform.scale.x;
-            };
+    if let Ok(g) = giraffe.get_single() {
+        if let Ok( mut transform) = query.get_single_mut() {
+            transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            // if let Ok(mouse_pos) = mouse_pos.pos {
+            //     if let Ok(mut head) = child_query.get_single_mut() {
+            //         head.translation.x = mouse_pos.x.abs();
+            //         head.translation.y = mouse_pos.y;
+            //         head.translation.z = 0.0;
+    
+            //         head.translation = head.translation.normalize() * 100.0;
+            //     }
+            //     let looking_left = f32::signum(transform.scale.x);
+            //     if looking_left < 0.0 && mouse_pos.x > transform.translation.x
+            //         || looking_left > 0.0 && mouse_pos.x < transform.translation.x
+            //     {
+            //         transform.scale.x = -transform.scale.x;
+            //     };
+            // }
         }
     }
 }
