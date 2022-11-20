@@ -11,6 +11,9 @@ use crate::head::*;
 use crate::neck::{NeckPoints, NeckTarget};
 use crate::{in_air::InAir, neck::NeckBundle};
 
+const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
+    bevy_rapier2d::rapier::geometry::Group::GROUP_1;
+
 #[derive(Component, Inspectable)]
 struct Giraffe {
     jump_speed: f32,
@@ -80,13 +83,8 @@ fn giraffe_movement(
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
                 KeyCode::Space => {
-                    let bundle = NeckBundle::new(
-                        Vec2 {
-                            x: 5.0,
-                            y: 5.0,
-                        },
-                        transform.translation.truncate(),
-                    );
+                    let bundle =
+                        NeckBundle::new(Vec2 { x: 5.0, y: 5.0 }, transform.translation.truncate());
                     commands.spawn(bundle);
                 }
                 _ => {}
@@ -114,7 +112,7 @@ fn giraffe_turn_system(
                 if let Some(mouse_pos) = mouse_pos {
                     if let Ok(mut head) = child_query.get_single_mut() {
                         head.translation = mouse_pos;
-                        println!("{}, {}", head.translation.x, head.translation.y);
+                        //println!("{}, {}", head.translation.x, head.translation.y);
                     }
                     let looking_left = f32::signum(transform.scale.x);
                     if looking_left < 0.0 && mouse_pos.x > transform.translation.x
@@ -131,7 +129,12 @@ fn giraffe_turn_system(
 
 fn spawn_giraffe(mut commands: Commands) {
     commands
-        .spawn((GiraffeBundle::default(), CameraTarget, NeckTarget))
+        .spawn((
+            GiraffeBundle::default(),
+            CameraTarget,
+            NeckTarget,
+            CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
+        ))
         .with_children(|parent| {
             parent.spawn(HeadBundle::new());
         });

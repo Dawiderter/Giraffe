@@ -1,5 +1,9 @@
-use bevy::{prelude::*, sprite::Mesh2dHandle, render::render_resource::PrimitiveTopology};
-use bevy_rapier2d::prelude::*;
+use bevy::{prelude::*, render::render_resource::PrimitiveTopology, sprite::Mesh2dHandle};
+use bevy_rapier2d::{prelude::*, rapier::prelude::Group};
+
+use crate::platform::PLATFORM_GROUP;
+
+const NECK_GROUP : Group = Group::GROUP_30;
 
 const NECK_WIDTH: f32 = 25.0;
 
@@ -12,7 +16,7 @@ pub struct Neck;
 pub struct NeckBundle {
     neck: Neck,
     pub neckpoints: NeckPoints,
-    pub collider: Collider,
+    // pub collider: Collider,
     active_events: ActiveEvents,
 }
 
@@ -24,20 +28,30 @@ impl NeckBundle {
                 points: vec![head_point],
                 last_point: body_point,
             },
-            collider: default(),
-            active_events: ActiveEvents::COLLISION_EVENTS, 
+            // collider: default(),
+            active_events: ActiveEvents::COLLISION_EVENTS,
         }
     }
 }
 
-fn add_mesh(mut commands: Commands, query : Query<Entity, Added<Neck>>, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn add_mesh(
+    mut commands: Commands,
+    query: Query<Entity, Added<Neck>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     for entity in query.iter() {
-        commands.get_entity(entity).unwrap().insert(ColorMesh2dBundle {
-            mesh: meshes.add(Mesh::new(PrimitiveTopology::TriangleStrip)).into(),
-            material: materials.add(ColorMaterial::from(Color::YELLOW)),
-            transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
-            ..default()
-        });
+        commands
+            .get_entity(entity)
+            .unwrap()
+            .insert(ColorMesh2dBundle {
+                mesh: meshes
+                    .add(Mesh::new(PrimitiveTopology::TriangleStrip))
+                    .into(),
+                material: materials.add(ColorMaterial::from(Color::YELLOW)),
+                transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
+                ..default()
+            });
     }
 }
 
@@ -45,7 +59,7 @@ fn update_collision(mut query: Query<(&mut Collider, &NeckPoints)>) {
     for (mut coll, neck) in query.iter_mut() {
         let last_point = neck.last_point;
         let second_to_last = neck.points[neck.points.len() - 1];
-        
+
         *coll = Collider::polyline(vec![last_point, second_to_last], None);
     }
 }
@@ -60,10 +74,10 @@ pub struct NeckPoints {
 }
 
 impl NeckPoints {
-    pub fn add_point(&mut self ,point: Vec2) {
+    pub fn add_point(&mut self, point: Vec2) {
         self.points.push(point);
     }
-    
+
     fn perp(v_a: Vec2, v_b: Vec2) -> Vec2 {
         let diff_vector = v_b - v_a;
         let perp: Vec2 = (-diff_vector.y, diff_vector.x).into();
@@ -79,9 +93,8 @@ impl NeckPoints {
         let mut points = self.points.clone();
         points.push(self.last_point);
 
-        
         let perp_vector = Self::perp(points[0], points[1]);
-        
+
         let first_point = points[0];
 
         let first_split = (
@@ -152,15 +165,39 @@ impl NeckBendingPoints {
     }
 }
 
-fn neck_bend_system(mut query: Query<&mut NeckPoints>, mut collision_events: EventReader<CollisionEvent>) {}
+fn neck_bend_system(mut neck_query: Query<&mut NeckPoints>, rapier_ctx: Res<RapierContext>) {
+    for mut neck in neck_query.iter_mut() {
+        let ray_start = neck.points[neck.points.len() - 1];
+        let ray_end = neck.last_point - ray_start;
+        let ray_dir = ray_end.normalize();
+        let max_toi = ray_end.x / ray_dir.x;
 
-fn neck_mouse(mut neck_query: Query<&mut NeckPoints>, windows: Res<Windows>, input : Res<Input<MouseButton>>) {
+        let ray_pos = ray_start + ray_dir;
 
+        if let Some((entity, toi)) = rapier_ctx.cast_ray(
+            ray_pos,
+            ray_dir,
+            max_toi,
+            false,
+            QueryFilter::new().groups(InteractionGroups::none().with_memberships(NECK_GROUP).with_filter(PLATFORM_GROUP)),
+        ) {
+            let hit_point = ray_start + ray_dir * toi;
+            println!("Entity {:?} hit at point {}", entity, hit_point);
+            neck.add_point(hit_point);
+        }
+    }
+}
+
+fn neck_mouse(
+    mut neck_query: Query<&mut NeckPoints>,
+    windows: Res<Windows>,
+    input: Res<Input<MouseButton>>,
+) {
     let window = windows.get_primary().unwrap();
 
     let cursor = window.cursor_position().unwrap_or(Vec2::new(0., 0.));
 
-    let cursor = cursor - Vec2::new(window.width(), window.height())/2.;
+    let cursor = cursor - Vec2::new(window.width(), window.height()) / 2.;
 
     for mut neck in neck_query.iter_mut() {
         neck.last_point = cursor;
@@ -168,7 +205,6 @@ fn neck_mouse(mut neck_query: Query<&mut NeckPoints>, windows: Res<Windows>, inp
             neck.add_point(cursor);
         }
     }
-
 }
 
 fn neck_triangulate(
@@ -199,6 +235,7 @@ impl Plugin for NeckPlugin {
             .add_system(neck_triangulate)
             .add_system(add_mesh)
             .add_system(neck_mouse)
-            .add_system(update_collision);
+            .add_system(update_collision)
+            .add_system(neck_bend_system);
     }
 }
