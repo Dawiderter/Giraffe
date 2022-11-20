@@ -49,7 +49,7 @@ pub fn spawn_platform(mut commands: Commands) {
     commands.spawn(PlatformBundle::type_one(
         Vec2 {
             x: 0.0,
-            y: -100.0,
+            y: -200.0,
         },
         size,
     ));

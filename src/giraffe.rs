@@ -1,6 +1,11 @@
+use std::any::Any;
+use std::f32::consts::PI;
+
 use crate::camera::CameraTarget;
+use crate::circular::AngularVelocity;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
+use crate::neck::Neck;
 use crate::neck::NeckPoints;
 use crate::on_floor::*;
 use crate::platform::*;
@@ -15,6 +20,7 @@ use crate::{in_air::InAir, neck::NeckBundle};
 
 const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
     bevy_rapier2d::rapier::geometry::Group::GROUP_1;
+const RIGHT_DIRECTION: Vec2 = Vec2 { x: 1.0, y: 0.0 };
 
 #[derive(Component, Inspectable)]
 pub struct Giraffe {
@@ -24,10 +30,10 @@ pub struct Giraffe {
 }
 
 #[derive(Component)]
-struct AngularVelocity(Vec2);
+struct GiraffeNeckStart(Vec2);
 
 #[derive(Component)]
-struct GiraffeNeckStart(Vec2);
+struct PreviousPlatform(Entity);
 
 #[derive(Bundle)]
 struct GiraffeBundle {
@@ -38,6 +44,7 @@ struct GiraffeBundle {
     event: ActiveEvents,
     sleep: Sleeping,
     neckstart: GiraffeNeckStart,
+    locked: LockedAxes,
 }
 
 impl Default for GiraffeBundle {
@@ -49,11 +56,12 @@ impl Default for GiraffeBundle {
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
-                right_direction: Vec2 { x: 1.0, y: 0.0 },
+                right_direction: RIGHT_DIRECTION,
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
             neckstart: GiraffeNeckStart(Vec2 { x: 80.0, y: 80.0 }),
+            locked: LockedAxes::ROTATION_LOCKED_Z,
         }
     }
 }
@@ -69,6 +77,7 @@ fn giraffe_movement(
         With<OnFloor>,
     >,
     head_query: Query<(&Transform, &GlobalTransform), With<Head>>,
+    neck_query: Query<&Neck>,
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
@@ -108,7 +117,10 @@ fn giraffe_movement(
                             };
 
                             let ray_start = head_glob_transform.translation().truncate();
-                            let ray_dir = head_glob_transform.translation().normalize().truncate();
+                            let ray_dir = (head_glob_transform.translation()
+                                - transform.translation)
+                                .normalize()
+                                .truncate();
                             let max_toi = 1000.0;
 
                             let ray_pos = ray_start + ray_dir;
@@ -121,11 +133,31 @@ fn giraffe_movement(
                                 QueryFilter::new().groups(InteractionGroups::all()),
                             ) {
                                 let hit_point = ray_start + ray_dir * toi;
-                                println!("Entity {:?} hit at point {}", entity, hit_point);
-                                commands.spawn(NeckBundle::new(
-                                    hit_point,
-                                    transform.translation.truncate(),
-                                ));
+                                if neck_query.iter().count() == 0 {
+                                    commands.spawn(NeckBundle::new(
+                                        hit_point,
+                                        transform.translation.truncate(),
+                                    ));
+                                    commands.get_entity(e).unwrap().insert(AngularVelocity {
+                                        radius: hit_point.distance(ray_start),
+                                        speed: 10.0
+                                            * if hit_point
+                                                .angle_between(Vec2 { x: 1.0, y: 1.0 })
+                                                .abs()
+                                                > PI / 2.0
+                                            {
+                                                1.0
+                                            } else {
+                                                -1.0
+                                            },
+                                        point: hit_point,
+                                    });
+                                    commands.entity(e).remove::<OnFloorBundle>().insert(
+                                        AddInAirBundle {
+                                            impulse: g.right_direction.perp() * g.jump_speed,
+                                        },
+                                    );
+                                }
                             }
 
                             commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
@@ -147,7 +179,39 @@ fn keep_neck_at_player_system(
             neck.last_point = transform
                 .transform_point(neckstart.0.extend(0.0))
                 .truncate();
-            println!("{}", neck.last_point);
+        }
+    }
+}
+
+fn giraffe_turn_system(
+    giraffe: Query<(&Giraffe, &Transform)>,
+    mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
+    mouse_pos: Res<CursorWorldPos>,
+) {
+    if let Ok((g, t)) = giraffe.get_single() {
+        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
+            println!("{}", RIGHT_DIRECTION.perp().perp().perp());
+            println!("{}", g.right_direction);
+
+            if g.right_direction.angle_between(RIGHT_DIRECTION.perp().perp().perp()) > 0.0 {
+                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            } else {
+                transform.rotation = Quat::from_rotation_z(
+                    2.0 * PI - g.right_direction.angle_between(RIGHT_DIRECTION),
+                );
+            }
+
+            if let Ok(mouse_pos) = mouse_pos.pos {
+                if g.right_direction
+                    .angle_between(mouse_pos.truncate() - t.translation.truncate())
+                    .abs()
+                    < PI / 2.0
+                {
+                    sprite.flip_x = false;
+                } else {
+                    sprite.flip_x = true;
+                }
+            }
         }
     }
 }
@@ -163,6 +227,7 @@ fn head_turn_system(
                 head.translation = mouse_pos - transform.translation;
 
                 head.translation = head.translation.normalize() * 100.0;
+                head.translation.z = 0.0;
             }
         }
     }
@@ -171,7 +236,7 @@ fn head_turn_system(
 #[derive(Component)]
 struct GiraffeSprite;
 
-fn spawn_giraffe(mut commands: Commands) {
+fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
     commands
         .spawn((
             GiraffeBundle::default(),
@@ -180,22 +245,36 @@ fn spawn_giraffe(mut commands: Commands) {
             CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
         ))
         .with_children(|parent| {
-            parent
-                .spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            color: Color::YELLOW,
-                            custom_size: Some(Vec2 { x: 100., y: 100. }),
-                            ..default()
-                        },
+            parent.spawn((
+                SpriteBundle {
+                    texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
+                    sprite: Sprite {
+                        custom_size: Some(Vec2 { x: 150.0, y: 150.0 }),
                         ..default()
                     },
-                    GiraffeSprite,
-                ))
-                .with_children(|parent| {
-                    parent.spawn(HeadBundle::new());
-                });
+                    ..default()
+                },
+                GiraffeSprite,
+            ));
+        })
+        .with_children(|parent| {
+            parent.spawn(HeadBundle::new());
         });
+}
+
+fn remove_neck_system(
+    mut query: Query<(Entity), With<Neck>>,
+    mut giraffe_query: Query<Entity, (With<InAir>, With<Giraffe>)>,
+    rapier_ctx: Res<RapierContext>,
+    mut commands: Commands,
+) {
+    for e in giraffe_query.iter() {
+        if rapier_ctx.contacts_with(e).count() > 0 {
+            if let Ok(neck) = query.get_single() {
+                commands.entity(neck).despawn();
+            }
+        }
+    }
 }
 
 fn giraffe_hit_floor(
@@ -214,12 +293,6 @@ fn giraffe_hit_floor(
                 };
 
                 if platforms.contains(other_collider) {
-                    commands
-                        .entity(e)
-                        .remove::<InAirBundle>()
-                        .insert(AddOnFloorBundle {
-                            on_which_floor: other_collider,
-                        });
                     if contact_pair.manifolds().last().unwrap().points().len() > 0 {
                         let point = if contact_pair.collider1() == e {
                             contact_pair
@@ -241,7 +314,12 @@ fn giraffe_hit_floor(
                                 .local_p2()
                         };
 
-                        println!("{}", point);
+                        commands
+                        .entity(e)
+                        .remove::<InAirBundle>()
+                        .insert(AddOnFloorBundle {
+                            on_which_floor: other_collider,
+                        });
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }
@@ -259,7 +337,9 @@ impl Plugin for GiraffePlugin {
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
             .add_system(head_turn_system)
+            .add_system(giraffe_turn_system)
             .add_system(keep_neck_at_player_system)
+            .add_system(remove_neck_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
     }
