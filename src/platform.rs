@@ -2,7 +2,8 @@ use crate::neck::NeckBendingPoints;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-pub const PLATFORM_GROUP : bevy_rapier2d::rapier::geometry::Group = bevy_rapier2d::rapier::geometry::Group::GROUP_15;
+pub const PLATFORM_GROUP: bevy_rapier2d::rapier::geometry::Group =
+    bevy_rapier2d::rapier::geometry::Group::GROUP_15;
 
 #[derive(Component)]
 struct Platform;
@@ -13,6 +14,7 @@ pub struct PlatformBundle {
     sprite: SpriteBundle,
     collider: Collider,
     group: Group,
+    bending_points: NeckBendingPoints,
 }
 
 impl PlatformBundle {
@@ -33,34 +35,22 @@ impl PlatformBundle {
                 ..default()
             },
             collider: Collider::cuboid(size.x / 2.0, size.y / 2.0),
-            group : Group::from_bits(PLATFORM_GROUP.bits()).unwrap(),
+            group: Group::from_bits(PLATFORM_GROUP.bits()).unwrap(),
+            bending_points: NeckBendingPoints::from_rectangle(size),
         }
-        .with_start_pos(Vec2 { x: 300.0, y: 0.0 })
+        .with_start_pos(pos)
     }
 }
 
 pub fn spawn_platform(mut commands: Commands) {
     let size = Vec2 { x: 100.0, y: 40.0 };
-    commands
-        .spawn(
-            PlatformBundle::type_one(Vec2 { x: 300.0, y: 0.0 }, size)
-                .with_start_pos(Vec2 { x: 300.0, y: 0.0 }),
-        )
-        .with_children(|parent| {
-            parent.spawn(NeckBendingPoints::from_rectangle(size));
-        });
-    commands.spawn(
-            PlatformBundle::type_one(Vec2 { x: 150.0, y: 300.0 }, size)
-                .with_start_pos(Vec2 { x: 150.0, y: 300.0 }),
-        )
-        .with_children(|parent| {
-            parent.spawn(NeckBendingPoints::from_rectangle(size));
-        });
-    commands.spawn(
-            PlatformBundle::type_one(Vec2 { x: -100.0, y: -100.0 }, size)
-                .with_start_pos(Vec2 { x: -100.0, y: -100.0 }),
-        )
-        .with_children(|parent| {
-            parent.spawn(NeckBendingPoints::from_rectangle(size));
-        });
+    commands.spawn(PlatformBundle::type_one(Vec2 { x: 300.0, y: 0.0 }, size));
+    commands.spawn(PlatformBundle::type_one(Vec2 { x: 150.0, y: 300.0 }, size));
+    commands.spawn(PlatformBundle::type_one(
+        Vec2 {
+            x: -100.0,
+            y: -100.0,
+        },
+        size,
+    ));
 }
