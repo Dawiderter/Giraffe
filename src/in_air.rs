@@ -1,9 +1,11 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::{Inspectable, RegisterInspectable};
 use bevy_rapier2d::prelude::*;
+use std::time::Duration;
 
-#[derive(Component, Inspectable)]
-pub struct  InAir;
+#[derive(Component)]
+pub struct  InAir {
+    pub timer: Timer,
+}
 
 #[derive(Bundle)]
 pub struct InAirBundle {
@@ -11,18 +13,23 @@ pub struct InAirBundle {
     pub righitbody: RigidBody,
     pub impulse: ExternalImpulse,
     pub colider: Collider,
+    pub gravity_scale: GravityScale,
 }
 
 impl Default for InAirBundle {
     fn default() -> Self {
         Self {
-            in_air: InAir,
+            in_air: InAir { 
+                timer: Timer::new(
+                    Duration::from_secs_f32(1.0), 
+                TimerMode::Once)},
             righitbody: RigidBody::Dynamic,
             impulse: ExternalImpulse {
-                impulse: Vec2 { x: 0.0, y: 0.0 }, 
+                impulse: Vec2 { x: 0.0, y: -100.0 }, 
                 ..default()
                 },
             colider: Collider::ball(100.0),
+            gravity_scale: GravityScale(0.0),
         }
     }
 }
@@ -42,14 +49,19 @@ fn add_in_air_bundle (query: Query<(Entity, &AddInAirBundle)>, mut commands: Com
     }
 }
 
+fn update_in_air_timer(mut query: Query<&mut InAir>, time: Res<Time>) {
+    for mut ia in query.iter_mut() {
+        ia.timer.tick(time.delta());
+    }
+}
+
 pub struct InAirPlugin;
 
 impl Plugin for InAirPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_system(add_in_air_bundle)
+            .add_system(update_in_air_timer);
             //DEBUG
-
-            .register_inspectable::<InAir>();
     }
 }
