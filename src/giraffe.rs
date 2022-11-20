@@ -1,13 +1,12 @@
-use std::any::Any;
 use std::f32::consts::PI;
 
 use crate::camera::CameraTarget;
 use crate::circular::AngularVelocity;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
-use crate::neck::NECK_GROUP;
 use crate::neck::Neck;
 use crate::neck::NeckPoints;
+use crate::neck::NECK_GROUP;
 use crate::on_floor::*;
 use crate::platform::*;
 use crate::shooting_head::ShootingHeadBundle;
@@ -48,8 +47,7 @@ struct GiraffeBundle {
     locked: LockedAxes,
 }
 
-
-const NECK_NORMAL : f32 = 35.;
+const NECK_NORMAL: f32 = 35.;
 
 impl Default for GiraffeBundle {
     fn default() -> Self {
@@ -64,13 +62,16 @@ impl Default for GiraffeBundle {
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
-            neckstart: GiraffeNeckStart(Vec2 { x: NECK_NORMAL, y: 0.0 }),
+            neckstart: GiraffeNeckStart(Vec2 {
+                x: NECK_NORMAL,
+                y: 0.0,
+            }),
             locked: LockedAxes::ROTATION_LOCKED_Z,
         }
     }
 }
 
-fn giraffe_movement(
+pub fn giraffe_movement(
     mut query: Query<
         (
             Entity,
@@ -145,7 +146,10 @@ fn neck_control_system(
                         ray_dir,
                         max_toi,
                         false,
-                        QueryFilter::new().groups(InteractionGroups::new(NECK_GROUP, GIRAFFE_GROUP.complement())),
+                        QueryFilter::new().groups(InteractionGroups::new(
+                            NECK_GROUP,
+                            GIRAFFE_GROUP.complement(),
+                        )),
                     ) {
                         let hit_point = ray_start + ray_dir * toi;
                         if neck_query.iter().count() == 0 {
@@ -200,8 +204,11 @@ fn giraffe_turn_system(
     mouse_pos: Res<CursorWorldPos>,
 ) {
     if let Ok((g, t, mut neck)) = giraffe.get_single_mut() {
-        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
-            transform.rotation = Quat::from_rotation_arc_2d(RIGHT_DIRECTION.normalize(), g.right_direction.normalize());
+        if let Ok((mut transform, mut sprite)) = query.get_single_mut() {
+            transform.rotation = Quat::from_rotation_arc_2d(
+                RIGHT_DIRECTION.normalize(),
+                g.right_direction.normalize(),
+            );
 
             if let Ok(mouse_pos) = mouse_pos.pos {
                 if g.right_direction
@@ -246,12 +253,17 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
             GiraffeBundle::default(),
             CameraTarget,
             NeckTarget,
-            CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::from_bits(NECK_GROUP.bits()).unwrap().complement()),
+            CollisionGroups::new(
+                Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(),
+                Group::from_bits(NECK_GROUP.bits()).unwrap().complement(),
+            ),
         ))
         .with_children(|parent| {
             parent.spawn((
                 SpriteBundle {
-                    texture: handles.load_untyped("zebra rozebrana/zyr_tlow_i_nogi_lustr.png").typed::<Image>(),
+                    texture: handles
+                        .load_untyped("zebra rozebrana/zyr_tlow_i_nogi_lustr.png")
+                        .typed::<Image>(),
                     sprite: Sprite {
                         custom_size: Some(Vec2 { x: 200.0, y: 150.0 }),
                         ..default()
@@ -262,7 +274,8 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
             ));
         })
         .with_children(|parent| {
-            parent.spawn(HeadBundle::new().with_texture(handles.load("zebra rozebrana/zyr_gl.png")));
+            parent
+                .spawn(HeadBundle::new().with_texture(handles.load("zebra rozebrana/zyr_gl.png")));
         });
 }
 
