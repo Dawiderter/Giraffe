@@ -32,8 +32,8 @@ struct GiraffeNeckStart(Vec2);
 struct GiraffeBundle {
     name: Name,
     in_air: InAirBundle,
+    sprite_bundle: SpriteBundle,
     giraffe: Giraffe,
-    sprite: SpriteBundle,
     event: ActiveEvents,
     sleep: Sleeping,
     neckstart: GiraffeNeckStart,
@@ -43,19 +43,12 @@ impl Default for GiraffeBundle {
     fn default() -> Self {
         Self {
             name: Name::new("Giraffe"),
+            sprite_bundle: SpriteBundle::default(),
             in_air: InAirBundle::default(),
             giraffe: Giraffe {
                 jump_speed: 500.0,
                 speed: 300.0,
                 right_direction: Vec2 { x: 1.0, y: 0.0 },
-            },
-            sprite: SpriteBundle {
-                sprite: Sprite {
-                    color: Color::YELLOW,
-                    custom_size: Some(Vec2 { x: 100., y: 100. }),
-                    ..default()
-                },
-                ..default()
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
@@ -163,11 +156,11 @@ fn keep_neck_at_player_system(
 }
 
 fn giraffe_turn_system(
-    mut query: Query<(&mut Transform, &mut Collider), With<Giraffe>>,
-    mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>)>,
+    mut query: Query<&mut Transform, (With<GiraffeSprite>, Without<Giraffe>)>,
+    mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((mut transform, mut collider)) = query.get_single_mut() {
+    if let Ok( mut transform) = query.get_single_mut() {
         if let Ok(mouse_pos) = mouse_pos.pos {
             if let Ok(mut head) = child_query.get_single_mut() {
                 head.translation.x = (transform.translation.x - mouse_pos.x).abs();
@@ -181,11 +174,13 @@ fn giraffe_turn_system(
                 || looking_left > 0.0 && mouse_pos.x < transform.translation.x
             {
                 transform.scale.x = -transform.scale.x;
-                collider.set_scale(Vec2 { x: 1.0, y: 1.0 }, 100);
             };
         }
     }
 }
+
+#[derive(Component)]
+struct GiraffeSprite;
 
 fn spawn_giraffe(mut commands: Commands) {
     commands
@@ -196,17 +191,26 @@ fn spawn_giraffe(mut commands: Commands) {
             CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
         ))
         .with_children(|parent| {
-            parent.spawn(HeadBundle::new());
+            parent.spawn((SpriteBundle {
+                sprite: Sprite {
+                    color: Color::YELLOW,
+                    custom_size: Some(Vec2 { x: 100., y: 100. }),
+                    ..default()
+                },
+                ..default()
+            },GiraffeSprite)).with_children(|parent| {
+                parent.spawn(HeadBundle::new());
+            });
         });
 }
 
 fn giraffe_hit_floor(
-    mut giraffe: Query<(Entity, &InAir, &Transform, &mut Giraffe)>,
+    mut giraffe: Query<(Entity, &InAir, &mut Giraffe)>,
     platforms: Query<(&Platform, &Transform)>,
     rapier_context: Res<RapierContext>,
     mut commands: Commands,
 ) {
-    for (e, ia, t, mut g) in giraffe.iter_mut() {
+    for (e, ia, mut g) in giraffe.iter_mut() {
         if ia.timer.finished() {
             for contact_pair in rapier_context.contacts_with(e) {
                 let other_collider = if contact_pair.collider1() == e {
@@ -245,8 +249,8 @@ fn giraffe_hit_floor(
 
                         println!("{}", point);
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
+                        return;
                     }
-                    return;
                 }
             }
         }
