@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-
+use bevy_kira_audio::prelude::*;
 use crate::camera::CameraTarget;
 use crate::circular::AngularVelocity;
 use crate::cursor::CursorWorldPos;
@@ -79,11 +79,13 @@ pub fn giraffe_movement(
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
     mut commands: Commands,
+    asset_server: Res<AssetServer>, audio: Res<Audio>
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
         for k in keys.get_pressed() {
             match k {
                 KeyCode::W => {
+                    audio.play(asset_server.load("jump.wav"));
                     commands
                         .entity(e)
                         .remove::<OnFloorBundle>()
@@ -195,7 +197,7 @@ fn giraffe_turn_system(
     mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((g, t)) = giraffe.get_single() {
+    if let Ok((g, t, mut neckstart)) = giraffe.get_single_mut() {
         if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
             transform.rotation = Quat::from_rotation_arc_2d(RIGHT_DIRECTION.normalize(), g.right_direction.normalize());
 
@@ -282,6 +284,7 @@ fn giraffe_hit_floor(
     platforms: Query<(&Platform, &Transform)>,
     rapier_context: Res<RapierContext>,
     mut commands: Commands,
+    asset_server: Res<AssetServer>, audio: Res<Audio>
 ) {
     for (e, ia, mut g) in giraffe.iter_mut() {
         if ia.timer.finished() {
@@ -320,6 +323,7 @@ fn giraffe_hit_floor(
                             .insert(AddOnFloorBundle {
                                 on_which_floor: other_collider,
                             });
+                        audio.play(asset_server.load("hiw.wav"));
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }

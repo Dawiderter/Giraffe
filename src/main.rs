@@ -51,10 +51,14 @@ fn load_extra_assets(mut commands: Commands, server: Res<AssetServer>) {
     }
 }
 
+fn start_background_audio(asset_server: Res<AssetServer>, audio: Res<Audio>) {
+    audio.play(asset_server.load("ST.wav")).looped();
+}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+        window: WindowDescriptor {
                 width: WINDOW_HEIGHT * WINDOW_WIDTH_PER_HEIGHT,
                 height: WINDOW_HEIGHT,
                 position: WindowPosition::Centered,
@@ -70,6 +74,7 @@ fn main() {
         .add_startup_system(load_extra_assets)
         .add_plugin(ArenaPlugin)
         .add_plugin(AudioPlugin)
+        .add_startup_system(start_background_audio)
         .add_plugin(CameraPlugin)
         .add_plugin(NeckPlugin)
         .add_startup_system(spawn_platform)
