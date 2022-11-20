@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::f32::consts::PI;
 
 use crate::camera::CameraTarget;
@@ -66,7 +65,7 @@ impl Default for GiraffeBundle {
     }
 }
 
-fn giraffe_movement(
+pub fn giraffe_movement(
     mut query: Query<
         (
             Entity,
@@ -184,17 +183,21 @@ fn keep_neck_at_player_system(
 }
 
 fn giraffe_turn_system(
-    giraffe: Query<(&Giraffe, &Transform)>,
+    mut giraffe: Query<(&Giraffe, &Transform, &mut GiraffeNeckStart)>,
     mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok((g, t)) = giraffe.get_single() {
-        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
+    if let Ok((g, t, mut neckstart)) = giraffe.get_single_mut() {
+        if let Ok((mut transform, mut sprite)) = query.get_single_mut() {
             println!("{}", RIGHT_DIRECTION.perp().perp().perp());
             println!("{}", g.right_direction);
 
-            if g.right_direction.angle_between(RIGHT_DIRECTION.perp().perp().perp()) > 0.0 {
-                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            if g.right_direction
+                .angle_between(RIGHT_DIRECTION.perp().perp().perp())
+                > 0.0
+            {
+                transform.rotation =
+                    Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
             } else {
                 transform.rotation = Quat::from_rotation_z(
                     2.0 * PI - g.right_direction.angle_between(RIGHT_DIRECTION),
@@ -208,7 +211,9 @@ fn giraffe_turn_system(
                     < PI / 2.0
                 {
                     sprite.flip_x = false;
+                    neckstart.0.x = 80.0;
                 } else {
+                    neckstart.0.x = -80.0;
                     sprite.flip_x = true;
                 }
             }
@@ -315,11 +320,11 @@ fn giraffe_hit_floor(
                         };
 
                         commands
-                        .entity(e)
-                        .remove::<InAirBundle>()
-                        .insert(AddOnFloorBundle {
-                            on_which_floor: other_collider,
-                        });
+                            .entity(e)
+                            .remove::<InAirBundle>()
+                            .insert(AddOnFloorBundle {
+                                on_which_floor: other_collider,
+                            });
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
                     }

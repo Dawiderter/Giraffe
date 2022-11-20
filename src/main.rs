@@ -45,10 +45,7 @@ use crate::in_air::*;
 #[derive(Resource)]
 struct ExtraAssets(Vec<HandleUntyped>);
 
-fn load_extra_assets(
-    mut commands: Commands,
-    server: Res<AssetServer>,
-) {
+fn load_extra_assets(mut commands: Commands, server: Res<AssetServer>) {
     if let Ok(handles) = server.load_folder("assets") {
         commands.insert_resource(ExtraAssets(handles));
     }
