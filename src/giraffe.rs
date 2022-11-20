@@ -261,20 +261,16 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
 }
 
 fn remove_neck_system(
-    mut query: Query<(Entity), (With<Neck>, With<InAir>)>,
-    mut platform_query: Query<(Entity, &mut PreviousPlatform)>,
+    mut query: Query<(Entity), With<Neck>>,
+    mut giraffe_query: Query<Entity, (With<InAir>, With<Giraffe>)>,
     rapier_ctx: Res<RapierContext>,
     mut commands: Commands,
 ) {
-    for e in query.iter() {
+    for e in giraffe_query.iter() {
         if rapier_ctx.contacts_with(e).count() > 0 {
-            println!("Deleting");
-            commands
-                .get_entity(e)
-                .unwrap()
-                .remove::<NeckBundle>()
-                .remove::<ColorMesh2dBundle>();
-            commands.remove_resource::<Assets<Mesh>>();
+            if let Ok(neck) = query.get_single() {
+                commands.entity(neck).despawn();
+            }
         }
     }
 }
