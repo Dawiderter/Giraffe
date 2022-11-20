@@ -2,13 +2,11 @@ use std::any::Any;
 use std::f32::consts::PI;
 
 use crate::camera::CameraTarget;
-use crate::camera::MainCamera;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
 use crate::neck::NeckPoints;
 use crate::on_floor::*;
 use crate::platform::*;
-use crate::shooting_head::ShootingHead;
 use crate::shooting_head::ShootingHeadBundle;
 use bevy::prelude::*;
 use bevy_inspector_egui::{Inspectable, RegisterInspectable};
@@ -28,6 +26,9 @@ pub struct Giraffe {
     speed: f32,
     pub right_direction: Vec2,
 }
+
+#[derive(Component)]
+struct AngularVelocity(Vec2);
 
 #[derive(Component)]
 struct GiraffeNeckStart(Vec2);
@@ -97,11 +98,7 @@ fn giraffe_movement(
                 KeyCode::D => {
                     kcc.translation = Some(g.right_direction * g.speed * time.delta_seconds());
                 }
-                KeyCode::Space => {
-                    let bundle =
-                        NeckBundle::new(Vec2 { x: 5.0, y: 5.0 }, transform.translation.truncate());
-                    commands.spawn(bundle);
-                }
+                KeyCode::Space => {}
                 KeyCode::F => {
                     if let Ok((head_transform, head_glob_transform)) = head_query.get_single() {
                         if let Ok(cursor_pos) = cursor_pos.pos {
@@ -116,8 +113,8 @@ fn giraffe_movement(
                                 y: cursor_pos.normalize().y,
                             };
 
-                            let ray_start = head_transform.translation.truncate();
-                            let ray_dir = head_transform.translation.normalize().truncate();
+                            let ray_start = head_glob_transform.translation().truncate();
+                            let ray_dir = head_glob_transform.translation().normalize().truncate();
                             let max_toi = 1000.0;
 
                             let ray_pos = ray_start + ray_dir;
@@ -162,24 +159,41 @@ fn keep_neck_at_player_system(
 }
 
 fn giraffe_turn_system(
-    giraffe: Query<&Giraffe>,
-    mut query: Query<&mut Transform, (With<GiraffeSprite>, Without<Giraffe>)>,
+    giraffe: Query<(&Giraffe, &Transform)>,
+    mut query: Query<(&mut Transform, &mut Sprite), (With<GiraffeSprite>, Without<Giraffe>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
-    if let Ok(g) = giraffe.get_single() {
-        if let Ok( mut transform) = query.get_single_mut() {
-            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) < PI {
+    if let Ok((g, t)) = giraffe.get_single() {
+        if let Ok( (mut transform, mut sprite)) = query.get_single_mut() {
+            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) > 0.0 {
                 transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
             } else {
                 transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
             }
 
             if let Ok(mouse_pos) = mouse_pos.pos {
-                if g.right_direction.angle_between(mouse_pos.truncate()) < PI/2.0 {
-                    transform.scale.x = transform.scale.x.abs();
+                if g.right_direction.angle_between(mouse_pos.truncate() - t.translation.truncate()).abs() < PI/2.0 {
+                    sprite.flip_x = false;
                 } else {
-                    transform.scale.x = -transform.scale.x.abs();
+                    sprite.flip_x = true;
                 }
+            }
+        }
+    }
+}
+
+
+fn head_turn_system(
+    mut query: Query<&mut Transform, With<Giraffe>>,
+    mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
+    mouse_pos: Res<CursorWorldPos>,
+) {
+    if let Ok(transform) = query.get_single_mut() {
+        if let Ok(mouse_pos) = mouse_pos.pos {
+            if let Ok(mut head) = child_query.get_single_mut() {
+                head.translation = mouse_pos - transform.translation;
+
+                head.translation = head.translation.normalize() * 100.0;
             }
         }
     }
@@ -198,15 +212,16 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
         ))
         .with_children(|parent| {
             parent.spawn((SpriteBundle {
-                texture: handles.load_untyped("ż☻yrafa.png").typed::<Image>(),
+                texture: handles.load_untyped("ż☻yrafa2.png").typed::<Image>(),
                 sprite: Sprite {
                     custom_size: Some(Vec2{x:150.0, y: 150.0}),
                     ..default()
                 },
                 ..default()
-            },GiraffeSprite)).with_children(|parent| {
-                parent.spawn(HeadBundle::new());
-            });
+            },GiraffeSprite));
+            })
+        .with_children(|parent| {
+            parent.spawn(HeadBundle::new());
         });
 }
 
@@ -270,6 +285,7 @@ impl Plugin for GiraffePlugin {
         app.add_startup_system(spawn_giraffe)
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
+            .add_system(head_turn_system)
             .add_system(giraffe_turn_system)
             .add_system(keep_neck_at_player_system)
             //DEBUG
