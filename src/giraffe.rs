@@ -5,6 +5,7 @@ use crate::camera::CameraTarget;
 use crate::circular::AngularVelocity;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
+use crate::neck::NECK_GROUP;
 use crate::neck::Neck;
 use crate::neck::NeckPoints;
 use crate::on_floor::*;
@@ -141,7 +142,7 @@ fn neck_control_system(
                         ray_dir,
                         max_toi,
                         false,
-                        QueryFilter::new().groups(InteractionGroups::all()),
+                        QueryFilter::new().groups(InteractionGroups::new(NECK_GROUP, GIRAFFE_GROUP.complement())),
                     ) {
                         let hit_point = ray_start + ray_dir * toi;
                         if neck_query.iter().count() == 0 {
@@ -240,7 +241,7 @@ fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
             GiraffeBundle::default(),
             CameraTarget,
             NeckTarget,
-            CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::ALL),
+            CollisionGroups::new(Group::from_bits(GIRAFFE_GROUP.bits()).unwrap(), Group::from_bits(NECK_GROUP.bits()).unwrap().complement()),
         ))
         .with_children(|parent| {
             parent.spawn((

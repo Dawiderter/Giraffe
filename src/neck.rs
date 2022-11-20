@@ -3,7 +3,7 @@ use bevy_rapier2d::{prelude::*, rapier::prelude::Group};
 
 use crate::platform::PLATFORM_GROUP;
 
-const NECK_GROUP: Group = Group::GROUP_30;
+pub const NECK_GROUP: Group = Group::GROUP_30;
 
 const NECK_WIDTH: f32 = 15.0;
 
