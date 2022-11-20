@@ -1,7 +1,11 @@
+use std::any::Any;
+use std::f32::consts::PI;
+
 use crate::camera::CameraTarget;
 use crate::camera::MainCamera;
 use crate::cursor::CursorWorldPos;
 use crate::in_air::*;
+use crate::neck::NeckPoints;
 use crate::on_floor::*;
 use crate::platform::*;
 use crate::shooting_head::ShootingHead;
@@ -19,11 +23,14 @@ const GIRAFFE_GROUP: bevy_rapier2d::rapier::geometry::Group =
 const RIGHT_DIRECTION: Vec2 = Vec2 { x: 1.0, y: 0.0 };
 
 #[derive(Component, Inspectable)]
-struct Giraffe {
+pub struct Giraffe {
     jump_speed: f32,
     speed: f32,
     pub right_direction: Vec2,
 }
+
+#[derive(Component)]
+struct GiraffeNeckStart(Vec2);
 
 #[derive(Bundle)]
 struct GiraffeBundle {
@@ -33,6 +40,8 @@ struct GiraffeBundle {
     giraffe: Giraffe,
     event: ActiveEvents,
     sleep: Sleeping,
+    neckstart: GiraffeNeckStart,
+    locked: LockedAxes,
 }
 
 impl Default for GiraffeBundle {
@@ -48,6 +57,8 @@ impl Default for GiraffeBundle {
             },
             event: ActiveEvents::COLLISION_EVENTS,
             sleep: Sleeping::disabled(),
+            neckstart: GiraffeNeckStart(Vec2 { x: 80.0, y: 80.0 }),
+            locked: LockedAxes::ROTATION_LOCKED_Z,
         }
     }
 }
@@ -67,6 +78,7 @@ fn giraffe_movement(
     keys: Res<Input<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
     mut commands: Commands,
+    rapier_ctx: Res<RapierContext>,
 ) {
     for (e, g, mut kcc, transform) in query.iter_mut() {
         for k in keys.get_pressed() {
@@ -102,7 +114,28 @@ fn giraffe_movement(
                             let velocity = Vec2 {
                                 x: cursor_pos.normalize().x,
                                 y: cursor_pos.normalize().y,
-                            } * 10.0;
+                            };
+
+                            let ray_start = head_transform.translation.truncate();
+                            let ray_dir = head_transform.translation.normalize().truncate();
+                            let max_toi = 1000.0;
+
+                            let ray_pos = ray_start + ray_dir;
+
+                            if let Some((entity, toi)) = rapier_ctx.cast_ray(
+                                ray_pos,
+                                ray_dir,
+                                max_toi,
+                                false,
+                                QueryFilter::new().groups(InteractionGroups::all()),
+                            ) {
+                                let hit_point = ray_start + ray_dir * toi;
+                                println!("Entity {:?} hit at point {}", entity, hit_point);
+                                commands.spawn(NeckBundle::new(
+                                    hit_point,
+                                    transform.translation.truncate(),
+                                ));
+                            }
 
                             commands.spawn(ShootingHeadBundle::new(transform_copy, velocity));
                         }
@@ -114,30 +147,40 @@ fn giraffe_movement(
     }
 }
 
+fn keep_neck_at_player_system(
+    mut neck_query: Query<&mut NeckPoints>,
+    mut query: Query<(&Transform, &GiraffeNeckStart), With<Giraffe>>,
+) {
+    for mut neck in neck_query.iter_mut() {
+        if let Ok((transform, neckstart)) = query.get_single_mut() {
+            neck.last_point = transform
+                .transform_point(neckstart.0.extend(0.0))
+                .truncate();
+            println!("{}", neck.last_point);
+        }
+    }
+}
+
 fn giraffe_turn_system(
     giraffe: Query<&Giraffe>,
     mut query: Query<&mut Transform, (With<GiraffeSprite>, Without<Giraffe>)>,
-    mut child_query: Query<&mut Transform, (With<Head>, Without<Giraffe>, Without<GiraffeSprite>)>,
     mouse_pos: Res<CursorWorldPos>,
 ) {
     if let Ok(g) = giraffe.get_single() {
         if let Ok( mut transform) = query.get_single_mut() {
-            transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
-            // if let Ok(mouse_pos) = mouse_pos.pos {
-            //     if let Ok(mut head) = child_query.get_single_mut() {
-            //         head.translation.x = mouse_pos.x.abs();
-            //         head.translation.y = mouse_pos.y;
-            //         head.translation.z = 0.0;
-    
-            //         head.translation = head.translation.normalize() * 100.0;
-            //     }
-            //     let looking_left = f32::signum(transform.scale.x);
-            //     if looking_left < 0.0 && mouse_pos.x > transform.translation.x
-            //         || looking_left > 0.0 && mouse_pos.x < transform.translation.x
-            //     {
-            //         transform.scale.x = -transform.scale.x;
-            //     };
-            // }
+            if g.right_direction.angle_between(Vec2{x: 0.0, y: -1.0}) < PI {
+                transform.rotation = Quat::from_rotation_z(g.right_direction.angle_between(RIGHT_DIRECTION));
+            } else {
+                transform.rotation = Quat::from_rotation_z(2.0*PI - g.right_direction.angle_between(RIGHT_DIRECTION));
+            }
+
+            if let Ok(mouse_pos) = mouse_pos.pos {
+                if g.right_direction.angle_between(mouse_pos.truncate()) < PI/2.0 {
+                    transform.scale.x = transform.scale.x.abs();
+                } else {
+                    transform.scale.x = -transform.scale.x.abs();
+                }
+            }
         }
     }
 }
@@ -145,7 +188,7 @@ fn giraffe_turn_system(
 #[derive(Component)]
 struct GiraffeSprite;
 
-fn spawn_giraffe(mut commands: Commands) {
+fn spawn_giraffe(mut commands: Commands, handles: Res<AssetServer>) {
     commands
         .spawn((
             GiraffeBundle::default(),
@@ -155,9 +198,9 @@ fn spawn_giraffe(mut commands: Commands) {
         ))
         .with_children(|parent| {
             parent.spawn((SpriteBundle {
+                texture: handles.load_untyped("ż☻yrafa.png").typed::<Image>(),
                 sprite: Sprite {
-                    color: Color::YELLOW,
-                    custom_size: Some(Vec2 { x: 100., y: 100. }),
+                    custom_size: Some(Vec2{x:150.0, y: 150.0}),
                     ..default()
                 },
                 ..default()
@@ -181,21 +224,35 @@ fn giraffe_hit_floor(
                 } else {
                     contact_pair.collider1()
                 };
-        
+
                 if platforms.contains(other_collider) {
-                    commands.entity(e)
+                    commands
+                        .entity(e)
                         .remove::<InAirBundle>()
                         .insert(AddOnFloorBundle {
                             on_which_floor: other_collider,
                         });
                     if contact_pair.manifolds().last().unwrap().points().len() > 0 {
-                        let point = 
-                        if contact_pair.collider1() == e {
-                            contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p1()
+                        let point = if contact_pair.collider1() == e {
+                            contact_pair
+                                .manifolds()
+                                .last()
+                                .unwrap()
+                                .points()
+                                .last()
+                                .unwrap()
+                                .local_p1()
                         } else {
-                            contact_pair.manifolds().last().unwrap().points().last().unwrap().local_p2()
+                            contact_pair
+                                .manifolds()
+                                .last()
+                                .unwrap()
+                                .points()
+                                .last()
+                                .unwrap()
+                                .local_p2()
                         };
-    
+
                         println!("{}", point);
                         g.right_direction = point.clamp_length(1.0, 1.0).perp();
                         return;
@@ -214,6 +271,7 @@ impl Plugin for GiraffePlugin {
             .add_system(giraffe_movement)
             .add_system(giraffe_hit_floor)
             .add_system(giraffe_turn_system)
+            .add_system(keep_neck_at_player_system)
             //DEBUG
             .register_inspectable::<Giraffe>();
     }
